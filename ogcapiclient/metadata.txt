@@ -1,0 +1,17 @@
+[general]
+name=OGC API Client for Navigator
+description=OGC API Client for Navigator
+category=Web
+version=1.0.0
+qgisMinimumVersion=3.44
+qgisMaximumVersion=4.99
+
+icon=icons/icon.svg
+tags=ogc,api,fetures,tiles
+
+author=NaturalGIS
+email=info@naturalgis.pt
+
+homepage=https://github.com/NaturalGIS/ogcapiclient
+tracker=https://github.com/NaturalGIS/ogcapiclient/issues
+repository=https://github.com/NaturalGIS/ogcapiclient
