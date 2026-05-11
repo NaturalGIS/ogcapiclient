@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>OgcApiClientDialogBase</class>
+ <widget class="QDialog" name="OgcApiClientDialogBase">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>671</width>
+    <height>565</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>OGC API Client</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="4" column="0" colspan="4">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Mode</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_cache_path">
+        <property name="text">
+         <string>Cache path</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="button_offline">
+        <property name="text">
+         <string>Offline</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QgsFileWidget" name="widget_cache_path" native="true"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="button_online">
+        <property name="text">
+         <string>Online</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Server URL</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="4">
+    <widget class="QgsExtentGroupBox" name="group_extent">
+     <property name="title">
+      <string>Area of interest</string>
+     </property>
+     <property name="collapsed" stdset="0">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="4">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Apply|QDialogButtonBox::StandardButton::Close|QDialogButtonBox::StandardButton::Help</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLineEdit" name="edit_server_url"/>
+   </item>
+   <item row="0" column="3">
+    <widget class="QPushButton" name="button_connect">
+     <property name="text">
+      <string>Connect</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Authentication</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="4">
+    <widget class="QTreeWidget" name="collections_tree">
+     <property name="allColumnsShowFocus">
+      <bool>true</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>Title</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Abstract</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item row="1" column="2" colspan="2">
+    <widget class="QgsAuthConfigSelect" name="auth_widget" native="true"/>
+   </item>
+  </layout>
+  <zorder>group_extent</zorder>
+  <zorder>label</zorder>
+  <zorder>edit_server_url</zorder>
+  <zorder>button_connect</zorder>
+  <zorder>collections_tree</zorder>
+  <zorder>buttonBox</zorder>
+  <zorder>groupBox</zorder>
+  <zorder>label_2</zorder>
+  <zorder>auth_widget</zorder>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsFileWidget</class>
+   <extends>QWidget</extends>
+   <header>qgis.gui</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsExtentGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qgis.gui</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsAuthConfigSelect</class>
+   <extends>QWidget</extends>
+   <header>qgis.gui</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>OgcApiClientDialogBase</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>OgcApiClientDialogBase</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
