@@ -1,0 +1,36 @@
+[
+  {
+    "href": "https://ogcapi.example.com/collections/municipalities",
+    "rel": "items",
+    "type": "application/geo+json",
+    "title": "Municipalities – GeoJSON",
+    "profile": [
+      "http://www.opengis.net/spec/ogcapi-features-1/1.0/req/oas30",
+      "http://www.opengis.net/spec/ogcapi-features-2/1.0/req/crs"
+    ]
+  },
+  {
+    "href": "https://ogcapi.example.com/collections/municipalities",
+    "rel": "items",
+    "type": "application/json",
+    "title": "Municipalities – JSON"
+  },
+  {
+    "href": "https://ogcapi.example.com/collections/municipalities",
+    "rel": "items",
+    "type": "text/html",
+    "title": "Municipalities – HTML"
+  },
+  {
+    "href": "https://ogcapi.example.com/",
+    "rel": "root",
+    "type": "application/json",
+    "title": "Landing page"
+  },
+  {
+    "href": "https://ogcapi.example.com/collections/municipalities/tiles",
+    "rel": "http://www.opengis.net/def/rel/ogc/1.0/tiling-schemes",
+    "type": "application/json",
+    "title": "Tiling schemes"
+  }
+]

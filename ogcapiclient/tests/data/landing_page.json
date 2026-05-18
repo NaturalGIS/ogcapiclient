@@ -1,0 +1,36 @@
+{
+  "title": "Test OGC API",
+  "description": "Test OGC API landing page structure.",
+  "links": [
+    {
+      "href": "https://ogcapi.example.com/",
+      "rel": "self",
+      "type": "application/json",
+      "title": "This document"
+    },
+    {
+      "href": "https://ogcapi.example.com/",
+      "rel": "self",
+      "type": "text/html",
+      "title": "This document (HTML)"
+    },
+    {
+      "href": "https://ogcapi.example.com/conformance",
+      "rel": "conformance",
+      "type": "application/json",
+      "title": "OGC API conformance classes"
+    },
+    {
+      "href": "https://ogcapi.example.com/collections",
+      "rel": "data",
+      "type": "application/json",
+      "title": "Access the data"
+    },
+    {
+      "href": "https://ogcapi.example.com/openapi",
+      "rel": "service-desc",
+      "type": "application/vnd.oai.openapi+json;version=3.0",
+      "title": "OpenAPI definition"
+    }
+  ]
+}
