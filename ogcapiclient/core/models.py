@@ -1,3 +1,5 @@
+"""Dataclasses shared across the OGC API client core."""
+
 from dataclasses import dataclass, field
 from typing import Optional
 

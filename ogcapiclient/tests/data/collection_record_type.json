@@ -1,0 +1,26 @@
+{
+    "id": "snig",
+    "title": "SNIG",
+    "description": "OGC API que permite a descoberta e acesso a metadados registados no SNIG.",
+    "itemType": "record",
+    "extent": {
+        "spatial": {
+            "bbox": [[-9.51, 36.96, -6.19, 42.15]],
+            "crs": "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
+        }
+    },
+    "links": [
+        {
+            "type": "application/geo+json",
+            "rel": "items",
+            "title": "Items as GeoJSON",
+            "href": "https://ogcapi.dgterritorio.gov.pt/collections/snig/items?f=json"
+        },
+        {
+            "type": "application/json",
+            "rel": "self",
+            "title": "This document as JSON",
+            "href": "https://ogcapi.dgterritorio.gov.pt/collections/snig?f=json"
+        }
+    ]
+}

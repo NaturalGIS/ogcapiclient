@@ -1,0 +1,25 @@
+{
+    "id": "ortos-rgb",
+    "title": "OrtoSat 30 cm - Portugal Continental - 2023 (Cor Verdadeira)",
+    "description": "Cobertura de ortoimagens obtidas a partir de imagens de satélite.",
+    "extent": {
+        "spatial": {
+            "bbox": [[-10.1934, 36.7643, -5.70954, 42.2796]],
+            "crs": "http://www.opengis.net/def/crs/EPSG/0/4326"
+        }
+    },
+    "links": [
+        {
+            "type": "image/png",
+            "rel": "http://www.opengis.net/def/rel/ogc/1.0/map",
+            "title": "Map as png",
+            "href": "https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb/map?f=png"
+        },
+        {
+            "type": "application/json",
+            "rel": "self",
+            "title": "This document as JSON",
+            "href": "https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb?f=json"
+        }
+    ]
+}

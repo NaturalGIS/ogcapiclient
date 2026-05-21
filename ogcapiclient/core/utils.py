@@ -1,6 +1,24 @@
 """Utilities and helpers."""
 
-from ogcapiclient.core.models import Link
+from ogcapiclient.core.constants import (
+    FEATURES_MIME_TYPES,
+    MAPS_MIME_TYPES,
+    REL_COVERAGES_FULL,
+    REL_COVERAGES_SHORT,
+    REL_FEATURES_FULL,
+    REL_FEATURES_SHORT,
+    REL_MAPS_FULL,
+    REL_MAPS_SHORT,
+    REL_TILES_RASTER_FULL,
+    REL_TILES_RASTER_SHORT,
+    REL_TILES_VECTOR_FULL,
+    REL_TILES_VECTOR_SHORT,
+    TILES_MIME_TYPES,
+)
+from ogcapiclient.core.enums import CollectionType
+from ogcapiclient.core.models import BoundingBox, Collection, Link
+
+SKIP_ITEM_TYPES = frozenset({"record"})
 
 
 def parse_links(links: list[dict]) -> list[Link]:
@@ -9,7 +27,7 @@ def parse_links(links: list[dict]) -> list[Link]:
     :param links:
     :type links: list[dict]
 
-    :returns: A list of parsed Link objects.
+    :returns: A list of structured objects describing links.
     :rtype: list[Link]
     """
     parsed_links: list[Link] = []
@@ -48,7 +66,7 @@ def parse_links(links: list[dict]) -> list[Link]:
 
 
 def find_link(
-    links: list[Link], rel: str, preferable_types: list[str] = []
+    links: list[Link], rel: str, preferable_types: list[str] = None
 ) -> str | None:
     """Finds the href of the best-matching link.
 
@@ -71,9 +89,10 @@ def find_link(
 
     for link in links:
         if link.rel == rel:
+            mime = link.mime_type
             priority = (
-                preferable_types.index(link.type)
-                if link.type in preferable_types
+                preferable_types.index(mime)
+                if mime in preferable_types
                 else len(preferable_types)
             )
 
@@ -81,3 +100,132 @@ def find_link(
                 best_href = link.href
                 best_priority = priority
     return best_href
+
+
+def parse_extent(extent: dict) -> BoundingBox | None:
+    """Parses a raw extent dictionary into a BoundingBox object.
+
+    :param extent: Raw extent dictionary.
+    :type links: dict
+
+    :returns: A BoundingBox built from the first bbox entry, or None if the data is absent or malformed.
+    :rtype: BoundingBox | None
+    """
+    if not isinstance(extent, dict) or not extent:
+        return None
+
+    spatial_extent = extent.get("spatial", {})
+    if not isinstance(spatial_extent, dict) or not spatial_extent:
+        return None
+
+    crs = spatial_extent.get("crs", "")
+
+    bboxes = spatial_extent.get("bbox", [])
+    if not isinstance(bboxes, list) or len(bboxes) == 0:
+        return None
+
+    first = bboxes[0]
+    if not isinstance(first, list) or len(first) < 4:
+        return None
+
+    if len(first) == 6:
+        x_min, y_min, z_min, x_max, y_max, z_max = first
+    else:
+        x_min, y_min, x_max, y_max = first
+
+    try:
+        return BoundingBox(
+            x_min=float(x_min),
+            y_min=float(y_min),
+            x_max=float(x_max),
+            y_max=float(y_max),
+            crs=crs,
+        )
+    except (TypeError, ValueError) as e:
+        return None
+
+
+def parse_collection(collection: dict) -> Collection | None:
+    """Parses a raw collection dictionary into a Collection object.
+
+    Extracts id, title, description, extent, supported CRS list, and the capability - URL mapping from the collection's links array.
+
+    :param data: Raw collection dictionary.
+    :type links: dict
+
+    :returns: Structured information about collection.
+    :rtype: Collection
+    """
+    if not isinstance(collection, dict):
+        return None
+
+    cid = collection.get("id", "")
+    if not cid:
+        return None
+
+    item_type = str(collection.get("itemType", "")).lower().strip()
+    if item_type in SKIP_ITEM_TYPES:
+        return None
+
+    title = str(collection.get("title", "") or cid)
+    description = str(collection.get("description", "") or "")
+    bbox = parse_extent(collection.get("extent", {}))
+
+    crs = collection.get("crs", [])
+    if isinstance(crs, list):
+        supported_crs = [str(i) for i in crs]
+    else:
+        supported_crs = []
+
+    if not supported_crs:
+        supported_crs = ["http://www.opengis.net/def/crs/OGC/1.3/CRS84"]
+
+    crs = str(collection.get("storageCrs", ""))
+    storage_crs = crs if crs else None
+
+    capabilities: dict[CollectionType, str] = {}
+
+    links = parse_links(collection.get("links", []))
+
+    def _find_href(
+        short_rel: str, full_rel: str, preferable_types: list[str]
+    ) -> str | None:
+        return find_link(links, short_rel, preferable_types) or find_link(
+            links, full_rel, preferable_types
+        )
+
+    features_href = _find_href(
+        REL_FEATURES_SHORT, REL_FEATURES_FULL, FEATURES_MIME_TYPES
+    )
+    if features_href:
+        capabilities[CollectionType.FEATURES] = features_href
+
+    tiles_vector_href = _find_href(
+        REL_TILES_VECTOR_SHORT, REL_TILES_VECTOR_FULL, TILES_MIME_TYPES
+    )
+    if tiles_vector_href:
+        capabilities[CollectionType.TILES_VECTOR] = tiles_vector_href
+
+    tiles_raster_href = _find_href(
+        REL_TILES_RASTER_SHORT, REL_TILES_RASTER_FULL, TILES_MIME_TYPES
+    )
+    if tiles_raster_href:
+        capabilities[CollectionType.TILES_RASTER] = tiles_raster_href
+
+    map_href = _find_href(REL_MAPS_SHORT, REL_MAPS_FULL, MAPS_MIME_TYPES)
+    if map_href:
+        capabilities[CollectionType.MAPS] = map_href
+
+    coverage_href = _find_href(REL_COVERAGES_SHORT, REL_COVERAGES_FULL, [])
+    if coverage_href:
+        capabilities[CollectionType.COVERAGES] = coverage_href
+
+    return Collection(
+        id=cid,
+        title=title,
+        description=description,
+        extent=bbox,
+        capabilities=capabilities,
+        supported_crs=supported_crs,
+        storage_crs=storage_crs,
+    )
