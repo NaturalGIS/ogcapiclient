@@ -45,9 +45,9 @@ class CollectionType(Enum):
     FEATURES = auto()
     """OGC API - Features collection."""
     TILES_RASTER = auto()
-    """OGC API - Tiles collection serving vector tiles."""
-    TILES_VECTOR = auto()
     """OGC API - Tiles collection serving raster tiles."""
+    TILES_VECTOR = auto()
+    """OGC API - Tiles collection serving vector tiles."""
     MAPS = auto()
     """OGC API - Maps collection."""
     COVERAGES = auto()
