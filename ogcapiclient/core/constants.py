@@ -14,3 +14,14 @@ REL_COVERAGES_FULL = "http://www.opengis.net/def/rel/ogc/1.0/coverage"
 FEATURES_MIME_TYPES = ["application/geo+json", "application/json"]
 TILES_MIME_TYPES = ["application/json"]
 MAPS_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"]
+
+TMS_WEB_MERCATOR_QUAD = "WebMercatorQuad"
+
+OGC_TILE_MATRIX = "{tileMatrix}"
+OGC_TILE_ROW = "{tileRow}"
+OGC_TILE_COL = "{tileCol}"
+OGC_TILE_MATRIX_SET_ID = "{tileMatrixSetId}"
+
+QGIS_X = "{x}"
+QGIS_Y = "{y}"
+QGIS_Z = "{z}"

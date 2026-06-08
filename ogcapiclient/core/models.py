@@ -85,3 +85,39 @@ class DiscoveryResult:
     """Conformance classes reported by the /conformance endpoint."""
     collections: list[Collection]
     """All parsed geospatial collections available on the server."""
+
+
+@dataclass
+class TileSet:
+    """A single Tile Matrix Set available for a collection."""
+
+    tms_id: str
+    """Identifier of the Tile Matrix Set."""
+    url_template: str
+    """Tile URL template."""
+
+
+@dataclass
+class PreparedLayer:
+    """All data needed to add a single layer to the QGIS project."""
+
+    name: str
+    """Human-readable name for the layer."""
+    collection_type: CollectionType
+    """Type of the collection."""
+    uri_parts: dict[str, Any]
+    """Primary datasource URI parts used to create layer URI."""
+    tilesets: list[TileSet] = field(default_factory=list)
+    """All available tilesets (populated for tiles collections only)."""
+
+    @property
+    def provider_key(self) -> str:
+        """Returns the QGIS provider key based on the collection type."""
+        if self.collection_type == CollectionType.FEATURES:
+            return "oapif"
+        elif self.collection_type == CollectionType.TILES_RASTER:
+            return "wms"
+        elif self.collection_type == CollectionType.TILES_VECTOR:
+            return "xyzvectortiles"
+        else:
+            return ""

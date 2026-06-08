@@ -3,6 +3,13 @@
 from ogcapiclient.core.constants import (
     FEATURES_MIME_TYPES,
     MAPS_MIME_TYPES,
+    OGC_TILE_COL,
+    OGC_TILE_MATRIX,
+    OGC_TILE_MATRIX_SET_ID,
+    OGC_TILE_ROW,
+    QGIS_X,
+    QGIS_Y,
+    QGIS_Z,
     REL_COVERAGES_FULL,
     REL_COVERAGES_SHORT,
     REL_FEATURES_FULL,
@@ -14,9 +21,10 @@ from ogcapiclient.core.constants import (
     REL_TILES_VECTOR_FULL,
     REL_TILES_VECTOR_SHORT,
     TILES_MIME_TYPES,
+    TMS_WEB_MERCATOR_QUAD,
 )
 from ogcapiclient.core.enums import CollectionType
-from ogcapiclient.core.models import BoundingBox, Collection, Link
+from ogcapiclient.core.models import BoundingBox, Collection, Link, TileSet
 
 SKIP_ITEM_TYPES = frozenset({"record"})
 
@@ -26,7 +34,6 @@ def parse_links(links: list[dict]) -> list[Link]:
 
     :param links:
     :type links: list[dict]
-
     :returns: A list of structured objects describing links.
     :rtype: list[Link]
     """
@@ -76,7 +83,6 @@ def find_link(
     :type rel: str
     :param preferable_types: Ordered list of preferred MIME types.
     :type preferable_types: list[str]
-
     :returns: The URL of the best match or an empty string.
     :rtype: str, None
 
@@ -107,7 +113,6 @@ def parse_extent(extent: dict) -> BoundingBox | None:
 
     :param extent: Raw extent dictionary.
     :type links: dict
-
     :returns: A BoundingBox built from the first bbox entry, or None if the data is absent or malformed.
     :rtype: BoundingBox | None
     """
@@ -148,11 +153,8 @@ def parse_extent(extent: dict) -> BoundingBox | None:
 def parse_collection(collection: dict) -> Collection | None:
     """Parses a raw collection dictionary into a Collection object.
 
-    Extracts id, title, description, extent, supported CRS list, and the capability - URL mapping from the collection's links array.
-
     :param data: Raw collection dictionary.
     :type links: dict
-
     :returns: Structured information about collection.
     :rtype: Collection
     """
@@ -229,3 +231,127 @@ def parse_collection(collection: dict) -> Collection | None:
         supported_crs=supported_crs,
         storage_crs=storage_crs,
     )
+
+
+def get_tms_id(tileset: dict) -> str | None:
+    """Extracts the tile matrix set identifier from the tileset dictionary.
+
+    :param tilseset: Raw tileset dictionary.
+    :type tileset: dict
+    :returns: Tile matrix set ID.
+    :rtype: str
+    """
+
+    href = tileset.get("tileMatrixSetURI", "")
+    if href:
+        if href.startswith("urn:"):
+            return str(href).strip().split(":")[-1]
+        return str(href).rstrip("/").split("/")[-1]
+
+    links = parse_links(tileset.get("links", []))
+    href = find_link(links, "tiling-scheme") or find_link(links, "self")
+    if href:
+        if href.startswith("urn:"):
+            return str(href).strip().split(":")[-1]
+        return str(href).rstrip("/").split("/")[-1]
+
+    return None
+
+
+def create_template_url(template: str, tms_id: str) -> str:
+    """Creates a QGIS-ready templated tiles URL from an OGC API templated link.
+
+    :param template: OGC API templated URL.
+    :type templaye: str
+    :param template: TMS ID.
+    :type templaye: str
+    :returns: Tiles URL that can be used in QGIS.
+    :rtype: str
+    """
+    url = template.replace(OGC_TILE_MATRIX_SET_ID, tms_id)
+    url = url.replace(OGC_TILE_MATRIX, QGIS_Z)
+    url = url.replace(OGC_TILE_ROW, QGIS_Y)
+    url = url.replace(OGC_TILE_COL, QGIS_X)
+    return url
+
+
+def parse_tilesets(data: dict, preferable_types: list[str] = None) -> list[TileSet]:
+    """Parses OGC API Tiles response into a list of TileSet objects.
+
+    :param data: Raw tilesets dictionary.
+    :type data: dict
+    :param preferable_types: Ordered list of preferred MIME types.
+    :type preferable_types: list[str]
+    :returns: A list of structured objects describing links.
+    :rtype: list[Link]
+    """
+    parsed_tilesets: list[TileSet] = []
+
+    if not isinstance(data, dict):
+        return parsed_tilesets
+
+    links = parse_links(data.get("links", []))
+    root_templated_url = find_link(links, "item", preferable_types)
+
+    tilesets = data.get("tilesets", [])
+    if not isinstance(tilesets, list):
+        return parsed_tilesets
+
+    for tileset in tilesets:
+        if not isinstance(tileset, dict):
+            continue
+
+        tms_id = get_tms_id(tileset)
+        if not tms_id:
+            continue
+
+        if tms_id != TMS_WEB_MERCATOR_QUAD:
+            continue
+
+        tileset_links = parse_links(tileset.get("links", []))
+        templated_url = (
+            find_link(tileset_links, "item", preferable_types) or root_templated_url
+        )
+        if templated_url is None:
+            continue
+
+        url = create_template_url(templated_url, tms_id)
+        parsed_tilesets.append(TileSet(tms_id=tms_id, url_template=url))
+
+    return parsed_tilesets
+
+
+def create_uri_parts(
+    collection_id: str,
+    landing_page_url: str,
+    collection_type: CollectionType,
+    tileset: TileSet = None,
+    auth_cfg: str = None,
+) -> dict[str, Any]:
+    """Creates dictionary with parts required to build a connection string for collection.
+
+    :param collection_id: Collection ID.
+    :type collection_id: str
+    :param landing_page_url: Landing page URL.
+    :type landing_page_url: str
+    :param collection_type: Type of the collection.
+    :type collection_type: CollectionType
+    :param tileset: Tile matrix set to use. Only needed for TIles collections.
+    :type tileset: Tileset
+    :param auth_cfg: QGIS authentication configuration ID.
+    :type auth_cfg: str
+    :returns: A list of structured objects describing links.
+    :rtype: list[Link]
+    """
+    parts = {}
+    if collection_type == CollectionType.FEATURES:
+        parts = {"url": landing_page_url, "typename": collection_id}
+    elif collection_type == CollectionType.TILES_RASTER:
+        parts = {"url": tileset.url_template, "type": "xyz"}
+    elif collection_type == CollectionType.TILES_VECTOR:
+        parts = {"url": tileset.url_template, "type": "xyz"}
+
+    if auth_cfg:
+        parts["authcfg"] = auth_cfg
+
+    return parts
