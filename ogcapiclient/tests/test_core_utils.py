@@ -1,16 +1,17 @@
-import json
-import os
 import unittest
 
+from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
 from ogcapiclient.core.enums import CollectionType
+from ogcapiclient.core.models import TileSet
 from ogcapiclient.core.utils import (
+    create_uri_parts,
     find_link,
     parse_collection,
     parse_extent,
     parse_links,
+    parse_tilesets,
 )
-
-TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+from ogcapiclient.tests.utils import create_tileset_data, load_from_file
 
 
 class TestParseLinks(unittest.TestCase):
@@ -142,9 +143,7 @@ class TestParseLinks(unittest.TestCase):
         self.assertEqual(links[0].profiles, ["1", "2"])
 
     def test_landing_page_fixture(self):
-        file_path = os.path.join(TEST_DATA_PATH, "landing_page.json")
-        with open(file_path, encoding="utf-8") as f:
-            data = json.load(f)
+        data = load_from_file("landing_page.json")
 
         links = parse_links(data["links"])
         self.assertEqual(len(links), 5)
@@ -155,9 +154,7 @@ class TestParseLinks(unittest.TestCase):
         self.assertIn("data", rels)
 
     def test_links_with_profiles_fixture(self):
-        file_path = os.path.join(TEST_DATA_PATH, "links_with_profiles.json")
-        with open(file_path, encoding="utf-8") as f:
-            data = json.load(f)
+        data = load_from_file("links_with_profiles.json")
 
         links = parse_links(data)
         geo_json_link = next(lnk for lnk in links if lnk.type == "application/geo+json")
@@ -182,9 +179,7 @@ class TestFindLink(unittest.TestCase):
         ]
         cls._links_with_types = parse_links(data)
 
-        file_path = os.path.join(TEST_DATA_PATH, "landing_page.json")
-        with open(file_path, encoding="utf-8") as fh:
-            data = json.load(fh)
+        data = load_from_file("landing_page.json")
         cls._landing_page_links = parse_links(data["links"])
 
     def test_empty_links_returns_none(self):
@@ -431,11 +426,7 @@ class TestParseCollection(unittest.TestCase):
         self.assertIsNone(parse_collection({"id": "", "title": "Empty ID"}))
 
     def test_record_item_type_returns_none(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_record_type.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_record_type.json")
         self.assertIsNone(parse_collection(data))
 
     def test_record_item_type_skipped_even_with_capabilities(self):
@@ -453,19 +444,12 @@ class TestParseCollection(unittest.TestCase):
         self.assertIsNone(parse_collection(data))
 
     def test_feature_item_type_is_not_skipped(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertIsNotNone(result)
 
     def test_absent_item_type_is_not_skipped(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_maps_only.json"), encoding="utf-8"
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_maps_only.json")
         result = parse_collection(data)
         self.assertIsNotNone(result)
 
@@ -479,11 +463,7 @@ class TestParseCollection(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_id_and_title_parsed(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertEqual(result.id, "municipios")
         self.assertEqual(result.title, "CAOP2025 Municípios")
@@ -500,11 +480,7 @@ class TestParseCollection(unittest.TestCase):
         self.assertEqual(result.description, "")
 
     def test_extent_parsed_from_fixture(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertIsNotNone(result.extent)
         self.assertAlmostEqual(result.extent.x_min, -9.51)
@@ -518,11 +494,7 @@ class TestParseCollection(unittest.TestCase):
         self.assertIsNone(result.extent)
 
     def test_supported_crs_parsed(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertEqual(len(result.supported_crs), 4)
         self.assertListEqual(
@@ -543,11 +515,7 @@ class TestParseCollection(unittest.TestCase):
         )
 
     def test_storage_crs_parsed(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertEqual(
             result.storage_crs, "http://www.opengis.net/def/crs/EPSG/0/3763"
@@ -559,20 +527,12 @@ class TestParseCollection(unittest.TestCase):
         self.assertIsNone(result.storage_crs)
 
     def test_features_capability_detected(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertIn(CollectionType.FEATURES, result.capabilities)
 
     def test_features_href_points_to_items_endpoint(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         href = result.capabilities[CollectionType.FEATURES]
         self.assertEqual(
@@ -581,32 +541,20 @@ class TestParseCollection(unittest.TestCase):
         )
 
     def test_features_only_collection_has_no_tiles_or_maps(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_only.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_only.json")
         result = parse_collection(data)
         self.assertNotIn(CollectionType.TILES_VECTOR, result.capabilities)
         self.assertNotIn(CollectionType.TILES_RASTER, result.capabilities)
         self.assertNotIn(CollectionType.MAPS, result.capabilities)
 
     def test_features_and_vector_tiles_both_detected(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_and_vector_tiles.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_and_vector_tiles.json")
         result = parse_collection(data)
         self.assertIn(CollectionType.FEATURES, result.capabilities)
         self.assertIn(CollectionType.TILES_VECTOR, result.capabilities)
 
     def test_features_href_correct_in_mixed_collection(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_and_vector_tiles.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_and_vector_tiles.json")
         result = parse_collection(data)
         self.assertEqual(
             result.capabilities[CollectionType.FEATURES],
@@ -614,11 +562,7 @@ class TestParseCollection(unittest.TestCase):
         )
 
     def test_tiles_vector_href_points_to_tilesets_listing(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_and_vector_tiles.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_and_vector_tiles.json")
         result = parse_collection(data)
         href = result.capabilities[CollectionType.TILES_VECTOR]
         self.assertEqual(
@@ -626,28 +570,18 @@ class TestParseCollection(unittest.TestCase):
         )
 
     def test_mixed_collection_has_no_raster_tiles_or_maps(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_features_and_vector_tiles.json"),
-            encoding="utf-8",
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_features_and_vector_tiles.json")
         result = parse_collection(data)
         self.assertNotIn(CollectionType.TILES_RASTER, result.capabilities)
         self.assertNotIn(CollectionType.MAPS, result.capabilities)
 
     def test_maps_capability_detected(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_maps_only.json"), encoding="utf-8"
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_maps_only.json")
         result = parse_collection(data)
         self.assertIn(CollectionType.MAPS, result.capabilities)
 
     def test_maps_href_points_to_map_endpoint(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_maps_only.json"), encoding="utf-8"
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_maps_only.json")
         result = parse_collection(data)
         href = result.capabilities[CollectionType.MAPS]
         self.assertEqual(
@@ -655,10 +589,7 @@ class TestParseCollection(unittest.TestCase):
         )
 
     def test_maps_only_collection_has_no_features_or_tiles(self):
-        with open(
-            os.path.join(TEST_DATA_PATH, "collection_maps_only.json"), encoding="utf-8"
-        ) as f:
-            data = json.load(f)
+        data = load_from_file("collection_maps_only.json")
         result = parse_collection(data)
         self.assertNotIn(CollectionType.FEATURES, result.capabilities)
         self.assertNotIn(CollectionType.TILES_VECTOR, result.capabilities)
@@ -723,6 +654,304 @@ class TestParseCollection(unittest.TestCase):
             result.capabilities[CollectionType.TILES_VECTOR],
             "https://example.com/tiles?f=json",
         )
+
+
+class TestParseTilesets(unittest.TestCase):
+    def test_invalid_inputs_return_empty_list(self):
+        invalid_inputs = [
+            ({}, "empty dict"),
+            (None, "None"),
+            ("links", "string"),
+            ([], "empty list"),
+            (13, "number"),
+        ]
+
+        for payload, description in invalid_inputs:
+            with self.subTest(msg=f"Testing invalid input: {description}"):
+                self.assertListEqual(parse_tilesets(payload), [])
+
+    def test_missing_tilesets_key_returns_empty_list(self):
+        self.assertEqual(parse_tilesets({"links": []}), [])
+
+    def test_non_list_tilesets_value_returns_empty_list(self):
+        self.assertEqual(parse_tilesets({"tilesets": "bad"}), [])
+
+    def test_empty_tilesets_list_returns_empty_list(self):
+        self.assertEqual(parse_tilesets({"tilesets": []}), [])
+
+    def test_invalid_tileset_values_retuns_empty_list(self):
+        data = {"tilesets": ["not-a-dict", None, 13]}
+        self.assertEqual(parse_tilesets(data), [])
+
+    def test_tms_id_extracted_from_url(self):
+        data = create_tileset_data(
+            TMS_WEB_MERCATOR_QUAD,
+            "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
+        )
+        result = parse_tilesets(data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tms_id, TMS_WEB_MERCATOR_QUAD)
+
+    def test_tms_id_extracted_from_urn(self):
+        data = create_tileset_data(
+            TMS_WEB_MERCATOR_QUAD,
+            "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
+            True,
+        )
+        result = parse_tilesets(data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tms_id, TMS_WEB_MERCATOR_QUAD)
+
+    def test_tms_id_extracted_from_tiling_scheme_link(self):
+        data = {
+            "tilesets": [
+                {
+                    "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
+                    "links": [
+                        {
+                            "rel": "tiling-scheme",
+                            "href": "https://www.opengis.net/def/tilematrixset/OGC/1.0/WebMercatorQuad",
+                        },
+                        {
+                            "rel": "item",
+                            "href": "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
+                            "templated": True,
+                        },
+                    ],
+                }
+            ]
+        }
+        result = parse_tilesets(data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tms_id, TMS_WEB_MERCATOR_QUAD)
+
+    def test_tileset_without_tms_id_is_skipped(self):
+        data = {
+            "tilesets": [
+                {
+                    "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
+                    "links": [
+                        {
+                            "rel": "item",
+                            "href": "https://example.com/{tileMatrix}/{tileRow}/{tileCol}",
+                            "templated": True,
+                        }
+                    ],
+                }
+            ]
+        }
+        self.assertEqual(parse_tilesets(data), [])
+
+    def test_web_mercator_placeholders_replaced_with_qgis_xyz(self):
+        template = (
+            "https://example.com/WebMercatorQuad/{tileMatrix}/{tileRow}/{tileCol}"
+        )
+        data = create_tileset_data(TMS_WEB_MERCATOR_QUAD, template)
+        result = parse_tilesets(data)
+        self.assertEqual(
+            result[0].url_template, "https://example.com/WebMercatorQuad/{z}/{y}/{x}"
+        )
+
+    def test_tile_matrix_set_id_placeholder_replaced(self):
+        template = (
+            "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
+        )
+        data = create_tileset_data(TMS_WEB_MERCATOR_QUAD, template)
+        result = parse_tilesets(data)
+        url = result[0].url_template
+        self.assertNotIn("{tileMatrixSetId}", url)
+        self.assertIn("WebMercatorQuad", url)
+
+    def test_non_web_mercator_tms_returns_empty_list(self):
+        template = (
+            "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
+        )
+        data = create_tileset_data("ETRS89-TM35FIN", template)
+        result = parse_tilesets(data)
+        self.assertEqual(result, [])
+
+    def test_root_item_link_has_priority_over_tileset(self):
+        root_template = "https://example.com/root/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
+        tileset_template = "https://example.com/tileset/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
+        data = {
+            "links": [{"rel": "item", "href": root_template, "templated": True}],
+            "tilesets": [
+                {
+                    "tileMatrixSetURI": f"https://www.opengis.net/def/tilematrixset/OGC/1.0/{TMS_WEB_MERCATOR_QUAD}",
+                    "links": [
+                        {"rel": "item", "href": tileset_template, "templated": True}
+                    ],
+                }
+            ],
+        }
+        result = parse_tilesets(data)
+        self.assertIn("tileset", result[0].url_template)
+        self.assertNotIn("root", result[0].url_template)
+
+    def test_root_item_link_used_when_tileset_item_link_missed(self):
+        root_template = "https://example.com/root/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
+        data = {
+            "links": [{"rel": "item", "href": root_template, "templated": True}],
+            "tilesets": [
+                {
+                    "tileMatrixSetURI": f"https://www.opengis.net/def/tilematrixset/OGC/1.0/{TMS_WEB_MERCATOR_QUAD}",
+                    "links": [],
+                }
+            ],
+        }
+        result = parse_tilesets(data)
+        self.assertIn("root", result[0].url_template)
+
+    def test_tileset_with_no_template_skipped(self):
+        data = {
+            "tilesets": [
+                {
+                    "tileMatrixSetURI": f"https://www.opengis.net/def/tilematrixset/OGC/1.0/{TMS_WEB_MERCATOR_QUAD}",
+                    "links": [],
+                }
+            ]
+        }
+        result = parse_tilesets(data)
+        self.assertEqual(result, [])
+
+    def test_preferred_mime_type_link_is_selected(self):
+        data = {
+            "tilesets": [
+                {
+                    "tileMatrixSetURI": f"https://www.opengis.net/def/tilematrixset/OGC/1.0/{TMS_WEB_MERCATOR_QUAD}",
+                    "links": [
+                        {
+                            "rel": "item",
+                            "type": "image/png",
+                            "href": "https://example.com/png/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
+                        },
+                        {
+                            "rel": "item",
+                            "type": "application/vnd.mapbox-vector-tile",
+                            "href": "https://example.com/mvt/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
+                        },
+                    ],
+                }
+            ]
+        }
+        result = parse_tilesets(
+            data, preferable_types=["application/vnd.mapbox-vector-tile"]
+        )
+        self.assertIn("mvt", result[0].url_template)
+
+    def test_multiple_tilesets_all_parsed(self):
+        data = {
+            "tilesets": [
+                {
+                    "tileMatrixSetURI": f"https://www.opengis.net/def/tilematrixset/OGC/1.0/{TMS_WEB_MERCATOR_QUAD}",
+                    "links": [
+                        {
+                            "rel": "item",
+                            "href": f"https://example.com/{TMS_WEB_MERCATOR_QUAD}/{{tileMatrixSetId}}/{{tileMatrix}}/{{tileRow}}/{{tileCol}}",
+                        }
+                    ],
+                },
+                {
+                    "tileMatrixSetURI": f"https://www.opengis.net/def/tilematrixset/OGC/1.0/{TMS_WEB_MERCATOR_QUAD}",
+                    "links": [
+                        {
+                            "rel": "item",
+                            "href": f"https://test.com/{TMS_WEB_MERCATOR_QUAD}/{{tileMatrixSetId}}/{{tileMatrix}}/{{tileRow}}/{{tileCol}}",
+                        }
+                    ],
+                },
+            ]
+        }
+        result = parse_tilesets(data)
+        self.assertEqual(len(result), 2)
+        tms_ids = {ts.tms_id for ts in result}
+        self.assertEqual(tms_ids, {TMS_WEB_MERCATOR_QUAD})
+
+
+class TestCreateUriParts(unittest.TestCase):
+    LANDING_PAGE = "https://example.com"
+    COLLECTION_ID = "testCollection"
+    TILE_URL = "https://example.com/tiles/{z}/{y}/{x}"
+
+    def _create_tileset(self, url: str = TILE_URL) -> TileSet:
+        """Creates a TileSet object."""
+        return TileSet(tms_id=TMS_WEB_MERCATOR_QUAD, url_template=url)
+
+    def test_features_uri_contains_url_and_typename(self):
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.FEATURES
+        )
+        self.assertEqual(parts["url"], self.LANDING_PAGE)
+        self.assertEqual(parts["typename"], self.COLLECTION_ID)
+
+    def test_features_uri_has_no_extra_keys_without_auth(self):
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.FEATURES
+        )
+        self.assertSetEqual(set(parts.keys()), {"url", "typename"})
+
+    def test_features_uri_includes_authcfg_when_provided(self):
+        parts = create_uri_parts(
+            self.COLLECTION_ID,
+            self.LANDING_PAGE,
+            CollectionType.FEATURES,
+            auth_cfg="authId",
+        )
+        self.assertEqual(parts["authcfg"], "authId")
+
+    def test_raster_tiles_uri_contains_template_url(self):
+        ts = self._create_tileset()
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_RASTER, ts
+        )
+        self.assertEqual(parts["url"], self.TILE_URL)
+
+    def test_raster_tiles_uri_type_is_xyz(self):
+        ts = self._create_tileset()
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_RASTER, ts
+        )
+        self.assertEqual(parts["type"], "xyz")
+
+    def test_raster_tiles_uri_includes_authcfg_when_provided(self):
+        ts = self._create_tileset()
+        parts = create_uri_parts(
+            self.COLLECTION_ID,
+            self.LANDING_PAGE,
+            CollectionType.TILES_RASTER,
+            ts,
+            "authId",
+        )
+        self.assertEqual(parts["authcfg"], "authId")
+
+    def test_vector_tiles_uri_contains_template_url(self):
+        ts = self._create_tileset()
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_VECTOR, ts
+        )
+        self.assertEqual(parts["url"], self.TILE_URL)
+
+    def test_vector_tiles_uri_type_is_xyz(self):
+        ts = self._create_tileset()
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_VECTOR, ts
+        )
+        self.assertEqual(parts["type"], "xyz")
+
+    def test_unsupported_collection_type_returns_empty_dict(self):
+        parts = create_uri_parts(
+            self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.MAPS
+        )
+        self.assertEqual(parts, {})
+
+    def test_authcfg_not_present_when_not_supplied(self):
+        for ct in (CollectionType.FEATURES, CollectionType.TILES_VECTOR):
+            with self.subTest(collection_type=ct):
+                ts = self._create_tileset()
+                parts = create_uri_parts(
+                    self.COLLECTION_ID, self.LANDING_PAGE, ct, tileset=ts
+                )
+                self.assertNotIn("authcfg", parts)
 
 
 if __name__ == "__main__":
