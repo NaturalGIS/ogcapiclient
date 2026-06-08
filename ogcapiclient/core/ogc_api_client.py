@@ -1,13 +1,21 @@
 """OGC API client.
 
-Stateless HTTP helper that performs a discovery workflow: landing page → conformance → collections.
+Stateless HTTP helper that performs a discovery workflow: landing page → conformance → collections
+and provides a method to retrieve tilesets for a collection.
 """
 
-from ogcapiclient.core.enums import ClientError, LogLevel
+from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
+from ogcapiclient.core.enums import ClientError, CollectionType, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.core.interfaces import Feedback, Loader, Logger
-from ogcapiclient.core.models import DiscoveryResult
-from ogcapiclient.core.utils import find_link, parse_collection, parse_links
+from ogcapiclient.core.models import DiscoveryResult, PreparedLayer
+from ogcapiclient.core.utils import (
+    create_uri_parts,
+    find_link,
+    parse_collection,
+    parse_links,
+    parse_tilesets,
+)
 
 
 class OgcApiClient:
@@ -133,13 +141,105 @@ class OgcApiClient:
             collections=parsed_collections,
         )
 
+    def prepare_layers(
+        self, landing_page: str, collections: list[tuple[Collection, CollectionType]]
+    ) -> list[PreparedLayer]:
+        """Fetches tilesets and generates configurations for selected collections.
+
+        :param landing_page: The landing page URL.
+        :type landing_page: str
+        :param collections: A list of tuples containing the Collection and type.
+        :type collections: list[tuple[Collection, CollectionType]]
+
+        :returns: List of structured objects for creating QGIS layers.
+        :rtype: list[PreparedLayer]
+
+        :raises OgcApiClientError: If the process is canceled or hits network errors.
+        """
+        prepared_layers: list[PreparedLayer] = []
+
+        collections_count = len(collections)
+        step = 100 / collections_count if collections_count > 0 else 0
+        for i, (collection, collection_type) in enumerate(collections):
+            self._check_canceled()
+
+            if collection_type == CollectionType.FEATURES:
+                uri_parts = create_uri_parts(
+                    collection.title,
+                    landing_page,
+                    collection_type,
+                    auth_cfg=self.auth_cfg,
+                )
+                prepared_layers.append(
+                    PreparedLayer(collection.title, collection_type, uri_parts)
+                )
+            elif collection_type in (
+                CollectionType.TILES_RASTER,
+                CollectionType.TILES_VECTOR,
+            ):
+                tiles_url = collection.capabilities.get(collection_type)
+                if not tiles_url:
+                    self.logger.log(
+                        f"Missing tiles URL for collection {collection.id}",
+                        LogLevel.WARNING,
+                    )
+                    continue
+
+                if collection_type == CollectionType.TILES_VECTOR:
+                    mime_types = [
+                        "application/vnd.mapbox-vector-tile",
+                        "application/x-protobuf",
+                    ]
+                elif collection_type == CollectionType.TILES_RASTER:
+                    mime_types = ["image/png", "image/jpeg", "image/webp"]
+
+                tilesets = self.get_tilesets(tiles_url)
+                parsed_tilesets = parse_tilesets(tilesets, mime_types)
+                if not parsed_tilesets:
+                    self.logger.log(
+                        f"No tileset found for collection {collection.id}",
+                        LogLevel.WARNING,
+                    )
+                    continue
+
+                preferred_tileset = next(
+                    (
+                        ts
+                        for ts in parsed_tilesets
+                        if ts.tms_id == TMS_WEB_MERCATOR_QUAD
+                    ),
+                    parsed_tilesets[0],
+                )
+                uri_parts = create_uri_parts(
+                    collection.id,
+                    landing_page,
+                    collection_type,
+                    preferred_tileset,
+                    self.auth_cfg,
+                )
+
+                prepared_layers.append(
+                    PreparedLayer(
+                        name=collection.title,
+                        collection_type=collection_type,
+                        uri_parts=uri_parts,
+                        tilesets=parsed_tilesets,
+                    )
+                )
+
+            self.feedback.set_progress(i * step)
+
+        self.logger.log(f"Prepared {len(prepared_layers)} layer(s).")
+
+        return prepared_layers
+
     def get_landing_page(self, url: str) -> dict:
         """Performs landing page request on an OGC API server.
 
         :param url: The base URL (landing page) of the OGC API server.
         :type url: str
 
-        :returns: The raw landing page data
+        :returns: The raw landing page data.
         :rtype: dict
 
         :raises OgcApiClientError: On network or parse failure.
@@ -153,10 +253,10 @@ class OgcApiClient:
         :param url: The URL of the conformance page of the OGC API server.
         :type url: str
 
-        :returns: The raw conformance data
+        :returns: The raw conformance data.
         :rtype: dict
 
-        :raises OgcApiClientError: On network or parse failure..
+        :raises OgcApiClientError: On network or parse failure.
         """
         self.logger.log(f"Fetching conformance: {url}")
         return self.loader.get_json(url, self.auth_cfg)
@@ -167,12 +267,26 @@ class OgcApiClient:
         :param url: The URL of the collections page of the OGC API server.
         :type url: str
 
-        :returns: The raw collections data
+        :returns: The raw collections data.
         :rtype: dict
 
-        :raises OgcApiClientError: On network or parse failure..
+        :raises OgcApiClientError: On network or parse failure.
         """
         self.logger.log(f"Fetching collections: {url}")
+        return self.loader.get_json(url, self.auth_cfg)
+
+    def get_tilesets(self, url: str) -> dict:
+        """Performs tilesets request on an OGC API server.
+
+        :param url: The URL of the tiles page.
+        :type url: str
+
+        :returns: The raw tilesets data.
+        :rtype: dict
+
+        :raises OgcApiClientError: On network or parse failure.
+        """
+        self.logger.log(f"Fetching tilesets: {url}")
         return self.loader.get_json(url, self.auth_cfg)
 
     def _check_canceled(self) -> None:

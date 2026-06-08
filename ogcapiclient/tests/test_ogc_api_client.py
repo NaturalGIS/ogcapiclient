@@ -1,12 +1,14 @@
-import json
-import os
 import unittest
 
-from ogcapiclient.core.enums import ClientError, LogLevel
+from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
+from ogcapiclient.core.enums import ClientError, CollectionType, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.core.ogc_api_client import OgcApiClient
-
-TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+from ogcapiclient.tests.utils import (
+    create_collection,
+    create_tileset_data,
+    load_from_file,
+)
 
 
 class MockLoader:
@@ -63,11 +65,6 @@ class MockFeedback:
         return self._is_canceled
 
 
-def _load_from_file(file_name: str) -> dict:
-    with open(os.path.join(TEST_DATA_PATH, file_name), encoding="utf-8") as f:
-        return json.load(f)
-
-
 class TestOgcApiClient(unittest.TestCase):
     def setUp(self):
         self.base_url = "https://ogcapi.example.com"
@@ -94,7 +91,7 @@ class TestOgcApiClient(unittest.TestCase):
                 "http://www.opengis.net/spec/ogcapi-common-1/1.0/req/oas30",
             ]
         }
-        self.valid_collections = _load_from_file("collections.json")
+        self.valid_collections = load_from_file("collections.json")
 
         self.loader = MockLoader(
             {
@@ -272,6 +269,195 @@ class TestOgcApiClient(unittest.TestCase):
 
                 if threshold == 0:
                     self.assertEqual(len(loader.calls), 0)
+
+    def test_features_layer_prepared_without_loader_call(self):
+        collection = create_collection()
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.FEATURES)]
+        )
+        self.assertEqual(len(result), 1)
+        self.assertEqual(len(self.loader.calls), 0)
+
+    def test_features_layer_has_correct_name(self):
+        collection = create_collection(title="test-features")
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.FEATURES)]
+        )
+        self.assertEqual(result[0].name, "test-features")
+
+    def test_features_layer_collection_type_is_features(self):
+        collection = create_collection()
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.FEATURES)]
+        )
+        self.assertEqual(result[0].collection_type, CollectionType.FEATURES)
+
+    def test_features_uri_parts_contain_url_and_typename(self):
+        collection = create_collection("municipios", "Municípios")
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.FEATURES)]
+        )
+        self.assertEqual(result[0].uri_parts["url"], self.base_url)
+        self.assertEqual(result[0].uri_parts["typename"], "Municípios")
+
+    def test_features_tilesets_list_is_empty(self):
+        collection = create_collection()
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.FEATURES)]
+        )
+        self.assertEqual(result[0].tilesets, [])
+
+    def test_vector_tiles_layer_fetches_tilesets_from_server(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        called_urls = [url for url, _ in self.loader.calls]
+        self.assertIn(tiles_url, called_urls)
+
+    def test_vector_tiles_layer_prepared_with_correct_name(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        collection = create_collection(
+            "nuts1", "NUTS 1", CollectionType.TILES_VECTOR, tiles_url
+        )
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertEqual(result[0].name, "NUTS 1")
+
+    def test_vector_tiles_layer_tilesets_are_populated(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertGreater(len(result[0].tilesets), 0)
+
+    def test_vector_tiles_prefers_web_mercator_quad(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertIn(TMS_WEB_MERCATOR_QUAD, result[0].uri_parts["url"])
+
+    def test_vector_tiles_without_web_mercator_tileset_skipped(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data("ETRS89-TM35FIN")
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertEqual(len(result), 0)
+
+    def test_collection_with_missing_tiles_url_is_skipped(self):
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=""
+        )
+        collection.capabilities = {}
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertEqual(result, [])
+        warnings = [
+            msg for level, msg in self.logger.messages if level == LogLevel.WARNING
+        ]
+        self.assertTrue(any("Missing tiles URL" in msg for msg in warnings))
+
+    def test_collection_with_empty_tilesets_response_is_skipped(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = {"tilesets": []}
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        result = self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertEqual(result, [])
+        warnings = [
+            msg for level, msg in self.logger.messages if level == LogLevel.WARNING
+        ]
+        self.assertTrue(any("No tileset found" in msg for msg in warnings))
+
+    def test_tilesets_request_failure_raises_error(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = OgcApiClientError(
+            ClientError.SERVER_ERROR, "503"
+        )
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        with self.assertRaises(OgcApiClientError) as context:
+            self.client.prepare_layers(
+                self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            )
+        self.assertEqual(context.exception.error_code, ClientError.SERVER_ERROR)
+
+    def test_multiple_collections_all_prepared(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        features_collection = create_collection(
+            "municipios", "Municípios", CollectionType.FEATURES
+        )
+        tiles_collection = create_collection(
+            "nuts1", "NUTS 1", CollectionType.TILES_VECTOR, tiles_url
+        )
+        result = self.client.prepare_layers(
+            self.base_url,
+            [
+                (features_collection, CollectionType.FEATURES),
+                (tiles_collection, CollectionType.TILES_VECTOR),
+            ],
+        )
+        self.assertEqual(len(result), 2)
+        names = {layer.name for layer in result}
+        self.assertEqual(names, {"Municípios", "NUTS 1"})
+
+    def test_progress_reported_during_prepare_layers(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+        )
+        self.assertGreater(len(self.feedback.progress_history), 0)
+
+    def test_cancellation_during_prepare_layers_raises_error(self):
+        tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
+        self.loader.responses[tiles_url] = create_tileset_data()
+        self.feedback._is_canceled = True
+        collection = create_collection(
+            collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
+        )
+        with self.assertRaises(OgcApiClientError) as ctx:
+            self.client.prepare_layers(
+                self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            )
+        self.assertEqual(ctx.exception.error_code, ClientError.CANCELLED)
+
+    def test_prepared_layer_count_is_logged(self):
+        collection = create_collection()
+        self.client.prepare_layers(
+            self.base_url, [(collection, CollectionType.FEATURES)]
+        )
+        self.assertTrue(
+            any("Prepared" in msg and "layer" in msg for _, msg in self.logger.messages)
+        )
 
 
 if __name__ == "__main__":
