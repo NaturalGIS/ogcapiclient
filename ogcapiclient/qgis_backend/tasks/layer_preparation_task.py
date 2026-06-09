@@ -16,6 +16,7 @@ class LayerPreparationTask(QgsTask):
         self,
         landing_page: str,
         collections: list[tuple[Collection, CollectionType]],
+        crs_map: dict[str, str],
         auth_cfg: str = "",
     ) -> None:
         """Initializes the layer preparation task.
@@ -24,6 +25,8 @@ class LayerPreparationTask(QgsTask):
         :type landing_page: str
         :param collections: A list of tuples containing the Collection and type.
         :type collections: list[tuple[Collection, CollectionType]]
+        :param crs_map: A dictionary mapping collection to requested CRS.
+        :type crs_map: dicr[str, str]
         :param auth_cfg: QGIS authentication configuration ID.
         :type auth_cfg: str
         """
@@ -34,6 +37,7 @@ class LayerPreparationTask(QgsTask):
         )
         self.landing_page = landing_page
         self.collections = collections
+        self.crs_map = crs_map
         self.auth_cfg = auth_cfg
         self.feedback = None
         self.data = None
@@ -52,7 +56,9 @@ class LayerPreparationTask(QgsTask):
 
         client = OgcApiClient(loader, logger, self.feedback, self.auth_cfg)
         try:
-            self.data = client.prepare_layers(self.landing_page, self.collections)
+            self.data = client.prepare_layers(
+                self.landing_page, self.collections, self.crs_map
+            )
             return True
         except OgcApiClientError as e:
             self.exception = e

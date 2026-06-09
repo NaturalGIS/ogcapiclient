@@ -142,7 +142,10 @@ class OgcApiClient:
         )
 
     def prepare_layers(
-        self, landing_page: str, collections: list[tuple[Collection, CollectionType]]
+        self,
+        landing_page: str,
+        collections: list[tuple[Collection, CollectionType]],
+        crs_map: dict[str, str],
     ) -> list[PreparedLayer]:
         """Fetches tilesets and generates configurations for selected collections.
 
@@ -150,6 +153,8 @@ class OgcApiClient:
         :type landing_page: str
         :param collections: A list of tuples containing the Collection and type.
         :type collections: list[tuple[Collection, CollectionType]]
+        :param crs_map: A dictionary mapping collection to requested CRS.
+        :type crs_map: dicr[str, str]
 
         :returns: List of structured objects for creating QGIS layers.
         :rtype: list[PreparedLayer]
@@ -164,10 +169,12 @@ class OgcApiClient:
             self._check_canceled()
 
             if collection_type == CollectionType.FEATURES:
+                crs = crs_map.get(collection.id)
                 uri_parts = create_uri_parts(
-                    collection.title,
+                    collection.id,
                     landing_page,
                     collection_type,
+                    crs=crs,
                     auth_cfg=self.auth_cfg,
                 )
                 prepared_layers.append(

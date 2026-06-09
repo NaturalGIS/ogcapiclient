@@ -326,6 +326,7 @@ def create_uri_parts(
     landing_page_url: str,
     collection_type: CollectionType,
     tileset: TileSet = None,
+    crs: str = None,
     auth_cfg: str = None,
 ) -> dict[str, Any]:
     """Creates dictionary with parts required to build a connection string for collection.
@@ -336,8 +337,10 @@ def create_uri_parts(
     :type landing_page_url: str
     :param collection_type: Type of the collection.
     :type collection_type: CollectionType
-    :param tileset: Tile matrix set to use. Only needed for TIles collections.
+    :param tileset: Tile matrix set to use. Only needed for Tiles collections.
     :type tileset: Tileset
+    :param crs: A coordinate reference system used for loading collection..
+    :type crs: str
     :param auth_cfg: QGIS authentication configuration ID.
     :type auth_cfg: str
     :returns: A list of structured objects describing links.
@@ -345,7 +348,7 @@ def create_uri_parts(
     """
     parts = {}
     if collection_type == CollectionType.FEATURES:
-        parts = {"url": landing_page_url, "typename": collection_id}
+        parts = {"url": landing_page_url, "typename": collection_id, "srsname": crs}
     elif collection_type == CollectionType.TILES_RASTER:
         parts = {"url": tileset.url_template, "type": "xyz"}
     elif collection_type == CollectionType.TILES_VECTOR:
