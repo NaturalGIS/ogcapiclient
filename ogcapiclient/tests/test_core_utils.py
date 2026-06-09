@@ -888,7 +888,7 @@ class TestCreateUriParts(unittest.TestCase):
         parts = create_uri_parts(
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.FEATURES
         )
-        self.assertSetEqual(set(parts.keys()), {"url", "typename"})
+        self.assertSetEqual(set(parts.keys()), {"url", "typename", "srsname"})
 
     def test_features_uri_includes_authcfg_when_provided(self):
         parts = create_uri_parts(
@@ -920,7 +920,7 @@ class TestCreateUriParts(unittest.TestCase):
             self.LANDING_PAGE,
             CollectionType.TILES_RASTER,
             ts,
-            "authId",
+            auth_cfg="authId",
         )
         self.assertEqual(parts["authcfg"], "authId")
 

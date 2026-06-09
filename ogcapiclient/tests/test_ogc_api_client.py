@@ -273,7 +273,9 @@ class TestOgcApiClient(unittest.TestCase):
     def test_features_layer_prepared_without_loader_call(self):
         collection = create_collection()
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.FEATURES)]
+            self.base_url,
+            [(collection, CollectionType.FEATURES)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(len(result), 1)
         self.assertEqual(len(self.loader.calls), 0)
@@ -281,29 +283,37 @@ class TestOgcApiClient(unittest.TestCase):
     def test_features_layer_has_correct_name(self):
         collection = create_collection(title="test-features")
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.FEATURES)]
+            self.base_url,
+            [(collection, CollectionType.FEATURES)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result[0].name, "test-features")
 
     def test_features_layer_collection_type_is_features(self):
         collection = create_collection()
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.FEATURES)]
+            self.base_url,
+            [(collection, CollectionType.FEATURES)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result[0].collection_type, CollectionType.FEATURES)
 
     def test_features_uri_parts_contain_url_and_typename(self):
         collection = create_collection("municipios", "Municípios")
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.FEATURES)]
+            self.base_url,
+            [(collection, CollectionType.FEATURES)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result[0].uri_parts["url"], self.base_url)
-        self.assertEqual(result[0].uri_parts["typename"], "Municípios")
+        self.assertEqual(result[0].uri_parts["typename"], "municipios")
 
     def test_features_tilesets_list_is_empty(self):
         collection = create_collection()
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.FEATURES)]
+            self.base_url,
+            [(collection, CollectionType.FEATURES)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result[0].tilesets, [])
 
@@ -314,7 +324,9 @@ class TestOgcApiClient(unittest.TestCase):
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
         self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         called_urls = [url for url, _ in self.loader.calls]
         self.assertIn(tiles_url, called_urls)
@@ -326,7 +338,9 @@ class TestOgcApiClient(unittest.TestCase):
             "nuts1", "NUTS 1", CollectionType.TILES_VECTOR, tiles_url
         )
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result[0].name, "NUTS 1")
 
@@ -337,7 +351,9 @@ class TestOgcApiClient(unittest.TestCase):
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertGreater(len(result[0].tilesets), 0)
 
@@ -348,7 +364,9 @@ class TestOgcApiClient(unittest.TestCase):
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertIn(TMS_WEB_MERCATOR_QUAD, result[0].uri_parts["url"])
 
@@ -359,7 +377,9 @@ class TestOgcApiClient(unittest.TestCase):
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(len(result), 0)
 
@@ -369,7 +389,9 @@ class TestOgcApiClient(unittest.TestCase):
         )
         collection.capabilities = {}
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result, [])
         warnings = [
@@ -384,7 +406,9 @@ class TestOgcApiClient(unittest.TestCase):
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
         result = self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertEqual(result, [])
         warnings = [
@@ -402,7 +426,9 @@ class TestOgcApiClient(unittest.TestCase):
         )
         with self.assertRaises(OgcApiClientError) as context:
             self.client.prepare_layers(
-                self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+                self.base_url,
+                [(collection, CollectionType.TILES_VECTOR)],
+                {collection.id: "EPSG:4326"},
             )
         self.assertEqual(context.exception.error_code, ClientError.SERVER_ERROR)
 
@@ -421,6 +447,7 @@ class TestOgcApiClient(unittest.TestCase):
                 (features_collection, CollectionType.FEATURES),
                 (tiles_collection, CollectionType.TILES_VECTOR),
             ],
+            {features_collection.id: "EPSG:4326"},
         )
         self.assertEqual(len(result), 2)
         names = {layer.name for layer in result}
@@ -433,7 +460,9 @@ class TestOgcApiClient(unittest.TestCase):
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
         self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+            self.base_url,
+            [(collection, CollectionType.TILES_VECTOR)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertGreater(len(self.feedback.progress_history), 0)
 
@@ -446,14 +475,18 @@ class TestOgcApiClient(unittest.TestCase):
         )
         with self.assertRaises(OgcApiClientError) as ctx:
             self.client.prepare_layers(
-                self.base_url, [(collection, CollectionType.TILES_VECTOR)]
+                self.base_url,
+                [(collection, CollectionType.TILES_VECTOR)],
+                {collection.id: "EPSG:4326"},
             )
         self.assertEqual(ctx.exception.error_code, ClientError.CANCELLED)
 
     def test_prepared_layer_count_is_logged(self):
         collection = create_collection()
         self.client.prepare_layers(
-            self.base_url, [(collection, CollectionType.FEATURES)]
+            self.base_url,
+            [(collection, CollectionType.FEATURES)],
+            {collection.id: "EPSG:4326"},
         )
         self.assertTrue(
             any("Prepared" in msg and "layer" in msg for _, msg in self.logger.messages)
