@@ -25,3 +25,9 @@ class OgcApiClientError(Exception):
     def __str__(self) -> str:
         """Returns the human-readable message."""
         return self.message
+
+
+class MbTilesError(Exception):
+    """Raised by MbTilesWriter in case of errors."""
+
+    pass
