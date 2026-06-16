@@ -9,6 +9,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QUrl
 
 from ogcapiclient.core.enums import CollectionType
+from ogcapiclient.core.exceptions import CrsNormalizationError
 from ogcapiclient.core.models import PreparedLayer
 
 
@@ -74,3 +75,65 @@ def create_layer_uri(layer: PreparedLayer, bbox: QgsRectangle = None) -> str:
         return ds_uri.uri()
     else:
         return ds_uri.encodedUri().data().decode("utf-8")
+
+
+def rectangle_to_string(bbox: QgsRectangle) -> str:
+    """Formats QgsRectangle to string representation.
+
+       Trims coordinates to 6 decimal places.
+    :param bbox: QgsRectangle to convert into string.
+    :type bbox: str
+    :returns: String representation of the input bbox.
+    :rtype: str
+    """
+    return f"{bbox.xMinimum():.6f},{bbox.yMinimum():.6f},{bbox.xMaximum():.6f},{bbox.yMaximum():.6f}"
+
+
+def sanitize_crs_string(crs_string: str) -> str:
+    """ "Resolves a CRS identifier string to a normalised, filesystem-safe identifier.
+
+    :param crs_string: CRS identifier string in any form accepted by QgsCoordinateReferenceSystem.createFromOgcWmsCrs().
+    :type crs_string: str
+    :returns: Normalised, filesystem-safe CRS identifier.
+    :rtype: str
+    :raises CrsNormalizationError: If crs_string cannot be resolved to a valid CRS.
+    """
+    crs = QgsCoordinateReferenceSystem()
+    crs.createFromOgcWmsCrs(crs_string)
+    if not crs.isValid():
+        raise CrsNormalizationError(
+            f"Could not resolve CRS identifier '{crs_string!r}'."
+        )
+
+    return crs.authid().replace(":", "").upper()
+
+
+def collect_tiles(bbox, max_zoom: int) -> dict:
+    """Computes the tile range for each zoom level from 0 to *max_zoom*.
+
+    Uses the WebMercatorQuad tile matrix set. The bounding box must be
+    provided in EPSG:4326 (geographic coordinates); QGIS reprojects
+    internally when computing the tile range.
+
+    The returned dictionary is keyed by zoom level (int) and maps to a
+    ``QgsTileRange`` object. The same dict is reused by the download task
+    so that tile ranges are computed only once.
+
+    :param bbox: Area of interest as a QgsRectangle in EPSG:4326.
+    :param max_zoom: Maximum zoom level to include (inclusive).
+    :type max_zoom: int
+    :returns: Mapping of zoom level → QgsTileRange.
+    :rtype: dict[int, QgsTileRange]
+    """
+    tile_matrix_set = QgsVectorTileMatrixSet.fromWebMercator(0, max_zoom)
+    tile_count = 0
+    tile_ranges = dict()
+    for i in range(max_zoom + 1):
+        tile_matrix = tile_matrix_set.tileMatrix(i)
+        tile_range = tile_matrix.tileRangeFromExtent(bbox)
+        tile_ranges[i] = tile_range
+        tile_count += (tile_range.endColumn() - tile_range.startColumn() + 1) * (
+            tile_range.endRow() - tile_range.startRow() + 1
+        )
+
+    return tile_count, tile_ranges

@@ -3,8 +3,14 @@ import unittest
 from qgis.core import QgsRectangle
 
 from ogcapiclient.core.enums import CollectionType
+from ogcapiclient.core.exceptions import CrsNormalizationError
 from ogcapiclient.core.models import PreparedLayer, TileSet
-from ogcapiclient.qgis_backend.utils import create_layer_uri, filter_from_bbox
+from ogcapiclient.qgis_backend.utils import (
+    create_layer_uri,
+    filter_from_bbox,
+    rectangle_to_string,
+    sanitize_crs_string,
+)
 
 
 def _features_layer(
@@ -264,6 +270,92 @@ class TestCreateLayerUri(unittest.TestCase):
     def test_vector_tiles_auth_cfg_present(self):
         uri = create_layer_uri(_vector_tiles_layer(auth_cfg="testAuthId"))
         self.assertIn("testAuthId", uri)
+
+
+class TestRectangleToString(unittest.TestCase):
+    def test_numbers_trimmed_to_six_decimal_places(self):
+        bbox = QgsRectangle(-8.612345678, 41.145678123, -8.600000000, 41.150000000)
+        result = rectangle_to_string(bbox)
+        self.assertEqual(result, "-8.612346,41.145678,-8.600000,41.150000")
+
+    def test_trailing_zeros_preserved(self):
+        bbox = QgsRectangle(0, -90.0, 180, 0)
+        result = rectangle_to_string(bbox)
+        self.assertEqual(result, "0.000000,-90.000000,180.000000,0.000000")
+
+    def test_output_format_is_xmin_ymin_xmax_ymax(self):
+        bbox = QgsRectangle(1.0, 2.0, 3.0, 4.0)
+        result = rectangle_to_string(bbox)
+        parts = result.split(",")
+        self.assertEqual(len(parts), 4)
+        self.assertEqual(float(parts[0]), bbox.xMinimum())
+        self.assertEqual(float(parts[1]), bbox.yMinimum())
+        self.assertEqual(float(parts[2]), bbox.xMaximum())
+        self.assertEqual(float(parts[3]), bbox.yMaximum())
+
+    def test_negative_coordinates(self):
+        bbox = QgsRectangle(-180.0, -90.0, -1.0, -1.0)
+        result = rectangle_to_string(bbox)
+        self.assertEqual(result, "-180.000000,-90.000000,-1.000000,-1.000000")
+
+
+class TestSanitizeCrs(unittest.TestCase):
+    def test_epsg_uppercase_colon(self):
+        self.assertEqual(sanitize_crs_string("EPSG:4326"), "EPSG4326")
+
+    def test_epsg_lowercase_colon(self):
+        self.assertEqual(sanitize_crs_string("epsg:4326"), "EPSG4326")
+
+    def test_epsg_mixed_case(self):
+        self.assertEqual(sanitize_crs_string("Epsg:4326"), "EPSG4326")
+
+    def test_epsg_3857(self):
+        self.assertEqual(sanitize_crs_string("EPSG:3857"), "EPSG3857")
+
+    def test_epsg_25832(self):
+        self.assertEqual(sanitize_crs_string("EPSG:25832"), "EPSG25832")
+
+    def test_ogc_urn_epsg_4326(self):
+        self.assertEqual(sanitize_crs_string("urn:ogc:def:crs:EPSG::4326"), "EPSG4326")
+
+    def test_ogc_urn_epsg_3857(self):
+        self.assertEqual(sanitize_crs_string("urn:ogc:def:crs:EPSG::3857"), "EPSG3857")
+
+    def test_output_contains_no_colon(self):
+        result = sanitize_crs_string("EPSG:4326")
+        self.assertNotIn(":", result)
+
+    def test_output_is_uppercase(self):
+        result = sanitize_crs_string("epsg:4326")
+        self.assertEqual(result, result.upper())
+
+    def test_output_is_deterministic(self):
+        self.assertEqual(
+            sanitize_crs_string("EPSG:4326"), sanitize_crs_string("EPSG:4326")
+        )
+
+    def test_epsg_short_form_and_urn_produce_same_output(self):
+        self.assertEqual(
+            sanitize_crs_string("EPSG:4326"),
+            sanitize_crs_string("urn:ogc:def:crs:EPSG::4326"),
+        )
+
+    def test_unrecognised_authority_raises(self):
+        with self.assertRaises(CrsNormalizationError):
+            sanitize_crs_string("FAKE:9999")
+
+    def test_empty_string_raises(self):
+        with self.assertRaises(CrsNormalizationError):
+            sanitize_crs_string("")
+
+    def test_malformed_string_raises(self):
+        with self.assertRaises(CrsNormalizationError):
+            sanitize_crs_string("not-a-crs-at-all")
+
+    def test_raises_correct_exception_type(self):
+        with self.assertRaises(CrsNormalizationError) as ctx:
+            sanitize_crs_string("INVALID:0000")
+        self.assertIn("INVALID:0000", str(ctx.exception))
 
 
 if __name__ == "__main__":

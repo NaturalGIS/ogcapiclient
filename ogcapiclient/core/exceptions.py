@@ -31,3 +31,9 @@ class MbTilesError(Exception):
     """Raised by MbTilesWriter in case of errors."""
 
     pass
+
+
+class CrsNormalizationError(Exception):
+    """Raised when a CRS string cannot be resolved to a valid, recognised CRS."""
+
+    pass

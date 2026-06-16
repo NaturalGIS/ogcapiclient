@@ -1,5 +1,9 @@
 """Utilities and helpers."""
 
+import hashlib
+import os
+import re
+
 from ogcapiclient.core.constants import (
     FEATURES_MIME_TYPES,
     MAPS_MIME_TYPES,
@@ -358,3 +362,77 @@ def create_uri_parts(
         parts["authcfg"] = auth_cfg
 
     return parts
+
+
+def hash_data(value: str) -> str:
+    """Returns the first 8 hex characters of the MD5 hash of value.
+
+    :param value: String to hash.
+    :type value: str
+    :returns: first 8 characters of hex digest.
+    :rtype: str
+    """
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:8]
+
+
+def sanitize_string(string: str) -> str:
+    """Sanitizes a string to be completely safe for all file systems.
+
+    :param string: String to sanitize.
+    :type string: str
+    :returns: Sanitized version of the input string.
+    :rtype: str
+    """
+    safe_string = re.sub(r"[^a-zA-Z0-9_\-]", "_", string)
+
+    safe_string = re.sub(r"_+", "_", safe_string)
+    safe_string = safe_string.strip("_")
+
+    return safe_string if safe_string else "dummy"
+
+
+def cache_path(
+    root: str,
+    server_url: str,
+    collection_id: str,
+    crs: str,
+    bbox: str,
+    collection_type: CollectionType,
+) -> str:
+    """Computes the deterministic cache path for a collection download.
+
+    The path structure is::
+
+        <cache_root>/<url_hash>/<collection_id>/<crs>/<bbox_hash>/<filename>
+
+    :param root: Root directory chosen by the user for offline storage.
+    :type root: str
+    :param server_url: Base URL of the OGC API server.
+    :type server_url: str
+    :param collection_id: Collection identifier as returned by the server.
+    :type collection_id: str
+    :param collection_type: The capability type being cached.
+    :type collection_type: CollectionType
+    :param crs: Sanitized CRS auth ID.
+    :type crs: str
+    :param bbox: Bounding box string
+    :type bbox: str.
+    :returns: Absolute path to the cache file (file may not exist yet).
+    :rtype: str
+    """
+    is_tiles = collection_type in (
+        CollectionType.TILES_RASTER,
+        CollectionType.TILES_VECTOR,
+    )
+
+    safe_id = sanitize_string(collection_id)
+    suffix = "mbtiles" if is_tiles else "gpkg"
+
+    return os.path.join(
+        root,
+        hash_data(server_url),
+        f"{safe_id}-{hash_data(collection_id)}",
+        crs,
+        hash_data(bbox),
+        f"data.{suffix}",
+    )

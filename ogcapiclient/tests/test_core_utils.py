@@ -1,15 +1,19 @@
+import os
 import unittest
 
 from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
 from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.models import TileSet
 from ogcapiclient.core.utils import (
+    cache_path,
     create_uri_parts,
     find_link,
+    hash_data,
     parse_collection,
     parse_extent,
     parse_links,
     parse_tilesets,
+    sanitize_string,
 )
 from ogcapiclient.tests.utils import create_tileset_data, load_from_file
 
@@ -952,6 +956,235 @@ class TestCreateUriParts(unittest.TestCase):
                     self.COLLECTION_ID, self.LANDING_PAGE, ct, tileset=ts
                 )
                 self.assertNotIn("authcfg", parts)
+
+
+class TestHashData(unittest.TestCase):
+    def test_returns_eight_characters(self):
+        value = "http://example.com/ogc"
+        result = hash_data(value)
+
+        self.assertEqual(len(result), 8)
+
+    def test_hash_contains_valid_characters(self):
+        value = "http://example.com/ogc"
+        result = hash_data(value)
+
+        self.assertTrue(all(c in "0123456789abcdef" for c in result))
+
+    def test_hash_correctness(self):
+        self.assertEqual(hash_data("test"), "9f86d081")
+
+    def test_hash_is_deterministic(self):
+        value = "http://example.com/ogc"
+        self.assertEqual(hash_data(value), hash_data(value))
+
+    def test_different_inputs_produce_different_hashes(self):
+        self.assertNotEqual(
+            hash_data("http://example.com/ogc/a"), hash_data("http://example.com/ogc/b")
+        )
+
+    def test_empty_string_returns_valid_hash(self):
+        self.assertEqual(len(hash_data("")), 8)
+
+    def test_unicode_string_returns_valid_hash(self):
+        self.assertEqual(len(hash_data("uñicøde_перевірка")), 8)
+
+
+class TestSanitizeString(unittest.TestCase):
+    def test_special_characters_collapsed(self):
+        self.assertEqual(sanitize_string("osm:!!@#$layer"), "osm_layer")
+
+    def test_empty_string_returns_fallback(self):
+        self.assertEqual(sanitize_string(""), "dummy")
+
+    def test_invalid_inputs_return_fallback(self):
+        valid_inputs = [
+            ("!@#$%^&*()", "special characters"),
+            ("          ", "spaces only"),
+        ]
+
+        for payload, description in valid_inputs:
+            with self.subTest(msg=f"Testing valid input: {description}"):
+                self.assertEqual(sanitize_string(payload), "dummy")
+
+    def test_valid_inputs_returned_unchanged(self):
+        valid_inputs = [
+            ("collection-123", "with dash"),
+            ("collection_name", "with underscore"),
+            ("simpleName", "letters only"),
+            ("collection123", "alphanumeric"),
+            ("1234567", "numbers only"),
+        ]
+
+        for payload, description in valid_inputs:
+            with self.subTest(msg=f"Testing valid input: {description}"):
+                self.assertEqual(sanitize_string(payload), payload)
+
+    def test_non_alphanumeric_inputs_sanitized(self):
+        valid_inputs = [
+            ("osm:transportation", "osm_transportation", "with colon"),
+            ("hydro/rivers/main", "hydro_rivers_main", "with slash"),
+            ("simple name", "simple_name", "with space"),
+            ("points.shp", "points_shp", "with dot"),
+        ]
+
+        for payload, expected, description in valid_inputs:
+            with self.subTest(msg=f"Testing input: {description}"):
+                self.assertEqual(sanitize_string(payload), expected)
+
+
+class TestCachePath(unittest.TestCase):
+    def _collection_segment(self, collection_id: str) -> str:
+        """Helper that generates collection segment as in the cache_path()."""
+        safe_id = sanitize_string(collection_id)
+        return f"{safe_id}-{hash_data(collection_id)}"
+
+    def test_cache_path_features(self):
+        root = "/test/cache/directory"
+        server_url = "http://example.com"
+        collection_id = "osm:buildings"
+        bbox_str = "1.000000,2.000000,3.000000,4.000000"
+        crs = "EPSG4326"
+
+        expected = os.path.join(
+            root,
+            hash_data(server_url),
+            self._collection_segment(collection_id),
+            crs,
+            hash_data(bbox_str),
+            "data.gpkg",
+        )
+
+        result = cache_path(
+            root, server_url, collection_id, crs, bbox_str, CollectionType.FEATURES
+        )
+        self.assertEqual(result, expected)
+
+    def test_cache_path_raster_tiles(self):
+        root = "/test/cache/directory"
+        server_url = "http://example.com"
+        collection_id = "dem"
+        bbox_str = "-10.500000,35.200000,-9.100000,40.000000"
+        crs = "EPSG3857"
+
+        expected = os.path.join(
+            root,
+            hash_data(server_url),
+            self._collection_segment(collection_id),
+            crs,
+            hash_data(bbox_str),
+            "data.mbtiles",
+        )
+
+        result = cache_path(
+            root, server_url, collection_id, crs, bbox_str, CollectionType.TILES_RASTER
+        )
+        self.assertEqual(result, expected)
+
+    def test_cache_path_vector_tiles(self):
+        root = "/test/cache/directory"
+        server_url = "http://example.com"
+        collection_id = "nuts1"
+        bbox_str = "-10.500000,35.200000,-9.100000,40.000000"
+        crs = "EPSG25832"
+
+        expected = os.path.join(
+            root,
+            hash_data(server_url),
+            self._collection_segment(collection_id),
+            crs,
+            hash_data(bbox_str),
+            "data.mbtiles",
+        )
+
+        result = cache_path(
+            root, server_url, collection_id, crs, bbox_str, CollectionType.TILES_VECTOR
+        )
+        self.assertEqual(result, expected)
+
+    def test_collection_ids_that_sanitize_identically_produce_different_paths(self):
+        root = "/cache"
+        server_url = "http://example.com"
+        bbox_str = "0.000000,0.000000,1.000000,1.000000"
+        crs = "EPSG4326"
+
+        path_ab = cache_path(
+            root, server_url, "a:b", crs, bbox_str, CollectionType.FEATURES
+        )
+        path_aab = cache_path(
+            root, server_url, "a::b", crs, bbox_str, CollectionType.FEATURES
+        )
+
+        self.assertNotEqual(path_ab, path_aab)
+
+    def test_collection_segment_contains_safe_id_prefix(self):
+        root = "/cache"
+        result = cache_path(
+            root,
+            "http://example.com",
+            "osm:buildings",
+            "EPSG4326",
+            "0,0,1,1",
+            CollectionType.FEATURES,
+        )
+        parts = result.split(os.sep)
+        collection_segment = parts[3]
+        self.assertTrue(collection_segment.startswith("osm_buildings-"))
+
+    def test_features_produces_gpkg_extension(self):
+        result = cache_path(
+            "/c",
+            "http://test.com",
+            "col",
+            "EPSG4326",
+            "0,0,1,1",
+            CollectionType.FEATURES,
+        )
+        self.assertTrue(result.endswith("data.gpkg"))
+
+    def test_raster_tiles_produces_mbtiles_extension(self):
+        result = cache_path(
+            "/c",
+            "http://test.com",
+            "col",
+            "EPSG3857",
+            "0,0,1,1",
+            CollectionType.TILES_RASTER,
+        )
+        self.assertTrue(result.endswith("data.mbtiles"))
+
+    def test_vector_tiles_produces_mbtiles_extension(self):
+        result = cache_path(
+            "/c",
+            "http://test.com",
+            "col",
+            "EPSG3857",
+            "0,0,1,1",
+            CollectionType.TILES_VECTOR,
+        )
+        self.assertTrue(result.endswith("data.mbtiles"))
+
+    def test_different_server_urls_produce_different_paths(self):
+        kwargs = dict(
+            collection_id="col",
+            crs="EPSG4326",
+            bbox="0,0,1,1",
+            collection_type=CollectionType.FEATURES,
+        )
+        p1 = cache_path("/c", "http://server-a.com", **kwargs)
+        p2 = cache_path("/c", "http://server-b.com", **kwargs)
+        self.assertNotEqual(p1, p2)
+
+    def test_different_bboxes_produce_different_paths(self):
+        kwargs = dict(
+            server_url="http://example.com",
+            collection_id="col",
+            crs="EPSG4326",
+            collection_type=CollectionType.FEATURES,
+        )
+        p1 = cache_path("/c", bbox="0.000000,0.000000,1.000000,1.000000", **kwargs)
+        p2 = cache_path("/c", bbox="0.000000,0.000000,2.000000,2.000000", **kwargs)
+        self.assertNotEqual(p1, p2)
 
 
 if __name__ == "__main__":
