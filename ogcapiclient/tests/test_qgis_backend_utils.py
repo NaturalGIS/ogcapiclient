@@ -1,11 +1,12 @@
 import unittest
 
-from qgis.core import QgsRectangle
+from qgis.core import QgsRectangle, QgsTileRange
 
 from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.exceptions import CrsNormalizationError
 from ogcapiclient.core.models import PreparedLayer, TileSet
 from ogcapiclient.qgis_backend.utils import (
+    collect_tiles,
     create_layer_uri,
     filter_from_bbox,
     rectangle_to_string,
@@ -356,6 +357,78 @@ class TestSanitizeCrs(unittest.TestCase):
         with self.assertRaises(CrsNormalizationError) as ctx:
             sanitize_crs_string("INVALID:0000")
         self.assertIn("INVALID:0000", str(ctx.exception))
+
+
+class TestCollectTiles(unittest.TestCase):
+    def test_zoom_zero_single_tile(self):
+        bbox = QgsRectangle(-10, -10, 10, 10)
+        max_zoom = 0
+
+        tile_count, tile_ranges = collect_tiles(bbox, max_zoom)
+        self.assertIsInstance(tile_count, int)
+        self.assertIsInstance(tile_ranges, dict)
+
+        self.assertIn(0, tile_ranges)
+        self.assertEqual(len(tile_ranges), 1)
+
+        zoom_0_range = tile_ranges[0]
+        self.assertEqual(zoom_0_range.startColumn(), 0)
+        self.assertEqual(zoom_0_range.endColumn(), 0)
+        self.assertEqual(zoom_0_range.startRow(), 0)
+        self.assertEqual(zoom_0_range.endRow(), 0)
+
+        self.assertEqual(tile_count, 1)
+
+    def test_multi_zoom_levels(self):
+        bbox = QgsRectangle(-20, -20, 20, 20)
+        max_zoom = 3
+
+        tile_count, tile_ranges = collect_tiles(bbox, max_zoom)
+
+        expected_zooms = list(range(max_zoom + 1))
+        self.assertEqual(list(tile_ranges.keys()), expected_zooms)
+
+        previous_tiles_at_level = 0
+        calculated_total_count = 0
+
+        for zoom in expected_zooms:
+            tr = tile_ranges[zoom]
+            self.assertIsInstance(tr, QgsTileRange)
+
+            self.assertTrue(tr.startColumn() <= tr.endColumn())
+            self.assertTrue(tr.startRow() <= tr.endRow())
+
+            tiles_at_level = (tr.endColumn() - tr.startColumn() + 1) * (
+                tr.endRow() - tr.startRow() + 1
+            )
+            self.assertTrue(tiles_at_level >= previous_tiles_at_level)
+
+            calculated_total_count += tiles_at_level
+            previous_tiles_at_level = tiles_at_level
+
+        self.assertEqual(tile_count, calculated_total_count)
+
+    def test_invalid_bbox(self):
+        bbox = QgsRectangle(20, 20, -20, -20)
+        max_zoom = 2
+
+        tile_count, tile_ranges = collect_tiles(bbox, max_zoom)
+
+        self.assertEqual(len(tile_ranges), max_zoom + 1)
+        self.assertIsInstance(tile_count, int)
+
+    def test_point_bbox(self):
+        bbox = QgsRectangle(-0.1278, 51.5074, -0.1278, 51.5074)
+        max_zoom = 5
+
+        tile_count, tile_ranges = collect_tiles(bbox, max_zoom)
+
+        for zoom in range(max_zoom + 1):
+            tr = tile_ranges[zoom]
+            self.assertEqual(tr.startColumn(), tr.endColumn())
+            self.assertEqual(tr.startRow(), tr.endRow())
+
+        self.assertEqual(tile_count, max_zoom + 1)
 
 
 if __name__ == "__main__":

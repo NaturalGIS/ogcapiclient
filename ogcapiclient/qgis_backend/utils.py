@@ -5,6 +5,8 @@ from qgis.core import (
     QgsProject,
     QgsProviderRegistry,
     QgsRectangle,
+    QgsTileMatrixSet,
+    QgsTileRange,
 )
 from qgis.PyQt.QtCore import QUrl
 
@@ -80,7 +82,8 @@ def create_layer_uri(layer: PreparedLayer, bbox: QgsRectangle = None) -> str:
 def rectangle_to_string(bbox: QgsRectangle) -> str:
     """Formats QgsRectangle to string representation.
 
-       Trims coordinates to 6 decimal places.
+    Trims coordinates to 6 decimal places.
+
     :param bbox: QgsRectangle to convert into string.
     :type bbox: str
     :returns: String representation of the input bbox.
@@ -108,7 +111,9 @@ def sanitize_crs_string(crs_string: str) -> str:
     return crs.authid().replace(":", "").upper()
 
 
-def collect_tiles(bbox, max_zoom: int) -> dict:
+def collect_tiles(
+    bbox: QgsRectangle, max_zoom: int
+) -> tuple[int, dict[int, QgsTileRange]]:
     """Computes the tile range for each zoom level from 0 to *max_zoom*.
 
     Uses the WebMercatorQuad tile matrix set. The bounding box must be
@@ -122,10 +127,11 @@ def collect_tiles(bbox, max_zoom: int) -> dict:
     :param bbox: Area of interest as a QgsRectangle in EPSG:4326.
     :param max_zoom: Maximum zoom level to include (inclusive).
     :type max_zoom: int
-    :returns: Mapping of zoom level → QgsTileRange.
-    :rtype: dict[int, QgsTileRange]
+    :returns: Tuple containing tile count and mapping of tile ranges by zoom level.
+    :rtype: tuple[int, dict[int, QgsTileRange]]
     """
-    tile_matrix_set = QgsVectorTileMatrixSet.fromWebMercator(0, max_zoom)
+    tile_matrix_set = QgsTileMatrixSet()
+    tile_matrix_set.addGoogleCrs84QuadTiles(0, max_zoom)
     tile_count = 0
     tile_ranges = dict()
     for i in range(max_zoom + 1):
