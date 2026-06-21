@@ -2,6 +2,8 @@ from qgis.core import QgsTask
 
 from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.exceptions import OgcApiClientError
+from ogcapiclient.core.interfaces import Feedback, Loader, Logger
+from ogcapiclient.core.models import Collection
 from ogcapiclient.core.ogc_api_client import OgcApiClient
 from ogcapiclient.qgis_backend.feedback import QgisFeedback
 from ogcapiclient.qgis_backend.loader import QgisLoader
@@ -17,6 +19,9 @@ class LayerPreparationTask(QgsTask):
         collections: list[tuple[Collection, CollectionType]],
         crs_map: dict[str, str],
         auth_cfg: str = "",
+        loader: Loader = None,
+        logger: Logger = None,
+        feedback: Feedback = None,
     ) -> None:
         """Initializes the layer preparation task.
 
@@ -25,9 +30,15 @@ class LayerPreparationTask(QgsTask):
         :param collections: A list of tuples containing the Collection and type.
         :type collections: list[tuple[Collection, CollectionType]]
         :param crs_map: A dictionary mapping collection to requested CRS.
-        :type crs_map: dicr[str, str]
+        :type crs_map: dict[str, str]
         :param auth_cfg: QGIS authentication configuration ID.
         :type auth_cfg: str
+        :param loader: Loader implementation.
+        :type loader: Loader
+        :param logger: Logger implementation.
+        :type logger: Logger
+        :param feedback: Feedback implementation.
+        :type feedback: Feedback
         """
 
         super().__init__(
@@ -38,7 +49,9 @@ class LayerPreparationTask(QgsTask):
         self.collections = collections
         self.crs_map = crs_map
         self.auth_cfg = auth_cfg
-        self.feedback = None
+        self.feedback = feedback if feedback else QgisFeedback(self)
+        self.logger = logger if logger else QgisLogger()
+        self.loader = loader if loader else QgisLoader(self.logger, self.feedback)
         self.data = None
         self.exception = None
 
@@ -48,18 +61,18 @@ class LayerPreparationTask(QgsTask):
         :returns: Whether the layer preparation was succesfull.
         :rtype: bool
         """
-
-        self.feedback = QgisFeedback(self)
-        loader = QgisLoader(self.feedback)
-        logger = QgisLogger()
-
-        client = OgcApiClient(loader, logger, self.feedback, self.auth_cfg)
+        client = OgcApiClient(self.loader, self.logger, self.feedback, self.auth_cfg)
         try:
             self.data = client.prepare_layers(
                 self.landing_page, self.collections, self.crs_map
             )
             return True
         except OgcApiClientError as e:
+            self.logger.log(
+                self.tr("Failed to prepare online layer(s): {error}.").format(
+                    error=str(e)
+                )
+            )
             self.exception = e
             return False
 
