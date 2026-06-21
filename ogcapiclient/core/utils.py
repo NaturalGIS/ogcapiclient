@@ -240,7 +240,7 @@ def parse_collection(collection: dict) -> Collection | None:
 def get_tms_id(tileset: dict) -> str | None:
     """Extracts the tile matrix set identifier from the tileset dictionary.
 
-    :param tilseset: Raw tileset dictionary.
+    :param tilset: Raw tileset dictionary.
     :type tileset: dict
     :returns: Tile matrix set ID.
     :rtype: str
@@ -267,8 +267,8 @@ def create_template_url(template: str, tms_id: str) -> str:
 
     :param template: OGC API templated URL.
     :type templaye: str
-    :param template: TMS ID.
-    :type templaye: str
+    :param tms_id: TMS ID.
+    :type tms_id: str
     :returns: Tiles URL that can be used in QGIS.
     :rtype: str
     """
@@ -332,7 +332,7 @@ def create_uri_parts(
     tileset: TileSet = None,
     crs: str = None,
     auth_cfg: str = None,
-) -> dict[str, Any]:
+) -> dict[str, str]:
     """Creates dictionary with parts required to build a connection string for collection.
 
     :param collection_id: Collection ID.
@@ -347,8 +347,8 @@ def create_uri_parts(
     :type crs: str
     :param auth_cfg: QGIS authentication configuration ID.
     :type auth_cfg: str
-    :returns: A list of structured objects describing links.
-    :rtype: list[Link]
+    :returns: A dictionary containing information for building layer URI.
+    :rtype: dict[str, str]
     """
     parts = {}
     if collection_type == CollectionType.FEATURES:

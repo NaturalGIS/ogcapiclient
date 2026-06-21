@@ -46,7 +46,7 @@ class BoundingBox:
     y_max: float = 0
     """The maximum Y coordinate."""
     crs: str = ""
-    """The coordinate reference system of the exent."""
+    """The coordinate reference system of the extent."""
 
     def __iter__(self):
         """Allows unpacking the bounding box as a tuple."""
@@ -64,7 +64,7 @@ class Collection:
     extent: BoundingBox
     """The spatial extent of the data within this collection."""
     capabilities: dict[CollectionType, str]
-    """Ssupported OGC API building blocks and their endpoints."""
+    """Supported OGC API building blocks and their endpoints."""
     supported_crs: list[str] = field(default_factory=list)
     """List of CRSs supported for querying or output."""
     description: str | None = None

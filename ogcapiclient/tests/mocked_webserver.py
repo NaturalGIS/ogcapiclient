@@ -247,7 +247,7 @@ class MockedWebServer:
         """Root URL of the server, e.g. http://127.0.0.1:54321."""
         return f"http://127.0.0.1:{self._port}"
 
-    def __enter__(self) -> "MockWebServer":
+    def __enter__(self) -> "MockedWebServer":
         self.start()
         return self
 

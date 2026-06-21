@@ -64,5 +64,5 @@ class OgcApiClientDialog(BASE, WIDGET):
 
     def open_help(self) -> None:
         QDesktopServices.openUrl(
-            QUrl.fromLocalFile(os.path.join(PLUGIN_PATH, "ogcapiclient.pdf"))
+            QUrl.fromLocalFile(os.path.join(PLUGIN_PATH, "help", "ogcapiclient.pdf"))
         )

@@ -8,7 +8,7 @@ from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
 from ogcapiclient.core.enums import ClientError, CollectionType, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.core.interfaces import Feedback, Loader, Logger
-from ogcapiclient.core.models import DiscoveryResult, PreparedLayer
+from ogcapiclient.core.models import Collection, DiscoveryResult, PreparedLayer
 from ogcapiclient.core.utils import (
     create_uri_parts,
     find_link,
@@ -74,7 +74,7 @@ class OgcApiClient:
 
         server_title = landing_page.get("title", "")
 
-        self.logger.log(f"Resolving conformace and collections URLs.")
+        self.logger.log(f"Resolving conformance and collections URLs.")
 
         links = parse_links(landing_page.get("links", []))
         collections_url = find_link(links, "data", ["application/json"]) or find_link(

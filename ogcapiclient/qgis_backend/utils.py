@@ -90,7 +90,7 @@ def rectangle_to_string(bbox: QgsRectangle) -> str:
 
 
 def sanitize_crs_string(crs_string: str) -> str:
-    """ "Resolves a CRS identifier string to a normalised, filesystem-safe identifier.
+    """Resolves a CRS identifier string to a normalised, filesystem-safe identifier.
 
     :param crs_string: CRS identifier string in any form accepted by QgsCoordinateReferenceSystem.createFromOgcWmsCrs().
     :type crs_string: str

@@ -1,5 +1,4 @@
 from qgis.core import QgsTask
-from qgis.PyQt.QtCore import pyqtSignal
 
 from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.exceptions import OgcApiClientError

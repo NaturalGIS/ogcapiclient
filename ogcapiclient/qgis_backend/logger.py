@@ -1,4 +1,4 @@
-"""Implementation of the Loader protocol with QGIS loggigng classes."""
+"""Implementation of the Logger protocol with QGIS loggigng classes."""
 
 from qgis.core import Qgis, QgsMessageLog
 
