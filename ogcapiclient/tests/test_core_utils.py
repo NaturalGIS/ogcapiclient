@@ -707,6 +707,26 @@ class TestParseTilesets(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].tms_id, TMS_WEB_MERCATOR_QUAD)
 
+    def test_tms_id_extracted_from_tile_matrix_set_uri(self):
+        data = {
+            "tilesets": [
+                {
+                    "tileMatrixSetURI": "https://www.opengis.net/def/tilematrixset/OGC/1.0/WebMercatorQuad",
+                    "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
+                    "links": [
+                        {
+                            "rel": "item",
+                            "href": "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
+                            "templated": True,
+                        },
+                    ],
+                }
+            ]
+        }
+        result = parse_tilesets(data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].tms_id, TMS_WEB_MERCATOR_QUAD)
+
     def test_tms_id_extracted_from_tiling_scheme_link(self):
         data = {
             "tilesets": [
@@ -942,6 +962,17 @@ class TestCreateUriParts(unittest.TestCase):
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_VECTOR, ts
         )
         self.assertEqual(parts["type"], "xyz")
+
+    def test_vector_tiles_uri_includes_authcfg_when_provided(self):
+        ts = self._create_tileset()
+        parts = create_uri_parts(
+            self.COLLECTION_ID,
+            self.LANDING_PAGE,
+            CollectionType.TILES_VECTOR,
+            ts,
+            auth_cfg="authId",
+        )
+        self.assertEqual(parts["authcfg"], "authId")
 
     def test_unsupported_collection_type_returns_empty_dict(self):
         parts = create_uri_parts(
