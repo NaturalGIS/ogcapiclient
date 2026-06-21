@@ -105,7 +105,7 @@ class PreparedLayer:
     """Human-readable name for the layer."""
     collection_type: CollectionType
     """Type of the collection."""
-    uri_parts: dict[str, Any]
+    uri_parts: dict[str, str]
     """Primary datasource URI parts used to create layer URI."""
     tilesets: list[TileSet] = field(default_factory=list)
     """All available tilesets (populated for tiles collections only)."""
@@ -115,6 +115,70 @@ class PreparedLayer:
         """Returns the QGIS provider key based on the collection type."""
         if self.collection_type == CollectionType.FEATURES:
             return "oapif"
+        elif self.collection_type == CollectionType.TILES_RASTER:
+            return "wms"
+        elif self.collection_type == CollectionType.TILES_VECTOR:
+            return "xyzvectortiles"
+        else:
+            return ""
+
+
+@dataclass
+class OfflineItem:
+    """Defines a collection prepared for offline use."""
+
+    collection: Collection
+    """The collection to download."""
+    collection_type: CollectionType
+    """Type of the collection."""
+    file_path: str
+    """Full path to the downloaded data."""
+    crs: str
+    """Coordinate reference system to use for Features collection."""
+    bbox: object
+    """Bounding box for spatial filtering."""
+    cache_exists: bool
+    """Whether a cached file already exists."""
+    tile_count: int = 0
+    """Estimated total number of tiles across all zoom levels."""
+    tile_ranges: dict[int, object] | None = None
+    """Tile ranges to download for Features collections."""
+
+
+@dataclass
+class OfflineDownload:
+    """Defines a collection for offline download."""
+
+    collection: Collection
+    """The collection to download."""
+    collection_type: CollectionType
+    """Type of the collection."""
+    file_path: str
+    """Full path to the file where the downloaded data should be saved."""
+    bbox: object | None = None
+    """Bounding box for spatial filtering."""
+    crs: str | None = None
+    """Coordinate reference system to use for Features collection."""
+    tile_ranges: dict[int, object] | None = None
+    """Tile ranges to download for Features collections."""
+
+
+@dataclass
+class DownloadedLayer:
+    """All data needed to add downloaded layer to the QGIS project."""
+
+    name: str
+    """Human-readable layer name."""
+    collection_type: CollectionType
+    """Type of the downloaded collection."""
+    file_path: str
+    """Absolute path to the downloaded file."""
+
+    @property
+    def provider_key(self) -> str:
+        """Returns the QGIS provider key based on the collection type."""
+        if self.collection_type == CollectionType.FEATURES:
+            return "ogr"
         elif self.collection_type == CollectionType.TILES_RASTER:
             return "wms"
         elif self.collection_type == CollectionType.TILES_VECTOR:

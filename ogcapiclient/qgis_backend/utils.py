@@ -1,6 +1,7 @@
 from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
+    QgsCoordinateTransformContext,
     QgsDataSourceUri,
     QgsProject,
     QgsProviderRegistry,
@@ -31,7 +32,7 @@ def filter_from_bbox(bbox: QgsRectangle, crs: str) -> str:
         target_crs = QgsCoordinateReferenceSystem(crs)
         if target_crs.isValid() and target_crs != source_crs:
             transform = QgsCoordinateTransform(
-                source_crs, target_crs, QgsProject.instance()
+                source_crs, target_crs, QgsCoordinateTransformContext()
             )
             filter_bbox = transform.transform(bbox)
 
@@ -130,13 +131,19 @@ def collect_tiles(
     :returns: Tuple containing tile count and mapping of tile ranges by zoom level.
     :rtype: tuple[int, dict[int, QgsTileRange]]
     """
+    ct = QgsCoordinateTransform(
+        QgsCoordinateReferenceSystem("EPSG:4326"),
+        QgsCoordinateReferenceSystem("EPSG:3857"),
+        QgsCoordinateTransformContext(),
+    )
+    extent = ct.transform(bbox)
     tile_matrix_set = QgsTileMatrixSet()
     tile_matrix_set.addGoogleCrs84QuadTiles(0, max_zoom)
     tile_count = 0
     tile_ranges = dict()
     for i in range(max_zoom + 1):
         tile_matrix = tile_matrix_set.tileMatrix(i)
-        tile_range = tile_matrix.tileRangeFromExtent(bbox)
+        tile_range = tile_matrix.tileRangeFromExtent(extent)
         tile_ranges[i] = tile_range
         tile_count += (tile_range.endColumn() - tile_range.startColumn() + 1) * (
             tile_range.endRow() - tile_range.startRow() + 1

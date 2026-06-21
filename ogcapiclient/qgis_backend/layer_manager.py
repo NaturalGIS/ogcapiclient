@@ -1,6 +1,7 @@
 """Helper to create QGIS layers and adding them to the project."""
 
 from qgis.core import (
+    QgsDataSourceUri,
     QgsMapLayer,
     QgsProject,
     QgsRasterLayer,
@@ -29,8 +30,8 @@ class LayerManager:
         :rtype: bool
         """
         uri = create_layer_uri(layer, bbox)
-        qgis_layer = LayerManager.create_online_layer(layer, uri)
-        return LayerManager.add_layer(qgis_layer)
+        layer = LayerManager.create_online_layer(layer, uri)
+        return LayerManager.add_layer(layer)
 
     @staticmethod
     def create_online_layer(layer: PreparedLayer, uri: str) -> QgsMapLayer:
@@ -41,12 +42,45 @@ class LayerManager:
         :param uri: QGIS-compatible data source URI.
         :type uri: str
         :returns: A QGIS map layer instance.
+        :rtype: QgsMapLayer
         """
         if layer.collection_type == CollectionType.TILES_RASTER:
             return QgsRasterLayer(uri, layer.name, layer.provider_key)
         if layer.collection_type == CollectionType.TILES_VECTOR:
             return QgsVectorTileLayer(uri, layer.name)
         return QgsVectorLayer(uri, layer.name, layer.provider_key)
+
+    @staticmethod
+    def add_offline_layer(layer: DownloadedLayer) -> bool:
+        """Creates a QGIS layer from a local file and adds it to the project.
+
+        :param layer: Downloaded layer configuration.
+        :type layer: DownloadedLayer
+        :returns: True if the layer was valid and added to the project.
+        :rtype: bool
+        """
+        layer = LayerManager.create_offline_layer(layer)
+        return LayerManager.add_layer(layer)
+
+    @staticmethod
+    def create_offline_layer(layer: DownloadedLayer) -> QgsMapLayer:
+        """Instantiates the appropriate QGIS layer type for an offline layer.
+
+        :param layer: Downloaded layer configuration.
+        :type layer: DownloadedLayer
+        :returns: A QGIS map layer instance.
+        :rtype: QgsMapLayer
+        """
+        if layer.collection_type == CollectionType.TILES_RASTER:
+            return QgsRasterLayer(layer.file_path, layer.name, layer.provider_key)
+        if layer.collection_type == CollectionType.TILES_VECTOR:
+            ds_uri = QgsDataSourceUri()
+            ds_uri.setParam("type", "mbtiles")
+            ds_uri.setParam("url", layer.file_path)
+            return QgsVectorTileLayer(
+                ds_uri.encodedUri().data().decode("utf-8"), layer.name
+            )
+        return QgsVectorLayer(layer.file_path, layer.name, layer.provider_key)
 
     @staticmethod
     def add_layer(layer: QgsMapLayer) -> bool:

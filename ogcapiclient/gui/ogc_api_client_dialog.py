@@ -7,8 +7,9 @@ from qgis.PyQt.QtCore import QItemSelectionModel, QModelIndex, Qt, QUrl
 from qgis.PyQt.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
 
+from ogcapiclient.core.constants import TILE_COUNT_THRESHOLD
 from ogcapiclient.core.enums import CollectionType
-from ogcapiclient.core.models import Collection
+from ogcapiclient.core.models import Collection, DownloadedLayer, OfflineDownload
 from ogcapiclient.gui.constants import (
     MAXIMUM_ABSTRACT_WIDTH,
     MAXIMUM_COLUMN_WIDTH,
@@ -16,7 +17,9 @@ from ogcapiclient.gui.constants import (
 )
 from ogcapiclient.gui.enums import CollectionModelColumn
 from ogcapiclient.gui.utils import collection_type_to_string
+from ogcapiclient.qgis_backend.download_manager import DownloadManager
 from ogcapiclient.qgis_backend.layer_manager import LayerManager
+from ogcapiclient.qgis_backend.tasks.download_task import DownloadTask
 from ogcapiclient.qgis_backend.tasks.layer_preparation_task import LayerPreparationTask
 from ogcapiclient.qgis_backend.tasks.ogc_discovery_task import OgcDiscoveryTask
 
@@ -279,7 +282,6 @@ class OgcApiClientDialog(BASE, WIDGET):
     def online_mode(self):
         """Prepares selected collections for addition to the project in online mode."""
         crs_map, items = self._selected_items()
-
         if not items:
             return
 
@@ -333,7 +335,123 @@ class OgcApiClientDialog(BASE, WIDGET):
 
     def offline_mode(self):
         """Prepares selected collections for addition to the project in offline mode."""
-        pass
+        cache_root = self.widget_cache_path.filePath()
+        if not cache_root:
+            QMessageBox.warning(
+                None, self.tr("No cache path"), self.tr("Cache path is not set.")
+            )
+            return
+
+        self.button_add.setEnabled(False)
+
+        if not os.path.exists(cache_root):
+            os.makedirs(cache_root)
+
+        bbox = self.group_extent.outputExtent()
+
+        crs_map, items = self._selected_items()
+        if not items:
+            return
+
+        download_items = DownloadManager.build_download_list(
+            items, cache_root, self.discovery_result.url, bbox, crs_map
+        )
+
+        local_list = []
+        download_list = []
+        for item in download_items:
+            if item.cache_exists:
+                answer = QMessageBox.question(
+                    None,
+                    self.tr("Cached data found"),
+                    self.tr(
+                        "Data for this collection has already been downloaded. Would you like to use the existing data?"
+                    ),
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.Cancel,
+                )
+                if answer == QMessageBox.StandardButton.Yes:
+                    local_list.append(
+                        DownloadedLayer(
+                            item.collection.title, item.collection_type, item.file_path
+                        )
+                    )
+                    continue
+                elif answer == QMessageBox.StandardButton.Cancel:
+                    return
+
+            if item.tile_count > TILE_COUNT_THRESHOLD:
+                answer = QMessageBox.question(
+                    None,
+                    self.tr("Large tile count"),
+                    self.tr(
+                        "Downloading selected area requires approximately {count} tiles. Do you want to proceed?"
+                    ).format(count=item.tile_count),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if answer == QMessageBox.StandardButton.No:
+                    continue
+
+            download_list.append(
+                OfflineDownload(
+                    item.collection,
+                    item.collection_type,
+                    item.file_path,
+                    item.bbox,
+                    item.crs,
+                    item.tile_ranges,
+                )
+            )
+
+        for i in local_list:
+            LayerManager.add_offline_layer(i)
+
+        if not download_list:
+            self.button_add.setEnabled(True)
+            return
+
+        auth_cfg = self.auth_widget.configId()
+
+        self.task = DownloadTask(self.discovery_result.url, download_list, auth_cfg)
+        self.task.taskTerminated.connect(self.download_finished)
+        self.task.taskCompleted.connect(self.add_offline_layers)
+
+        self.task_manager.addTask(self.task)
+
+    def download_finished(self) -> None:
+        """Triggered when data download finished."""
+        task = self.sender()
+        if self.task == task:
+            self.button_add.setEnabled(True)
+
+            if task.isCanceled():
+                QMessageBox.information(
+                    None, self.tr("Canceled"), self.tr("Operation was canceled.")
+                )
+            if not task.isCanceled() and task.exception:
+                QMessageBox.critical(
+                    None,
+                    self.tr("Error"),
+                    self.tr(
+                        "An error occured when downloading data. Check Message Log for more details."
+                    ),
+                )
+            self.task = None
+
+    def add_offline_layers(self) -> None:
+        """Adds collections to QGIS in offline mode."""
+        task = self.sender()
+        if self.task != task:
+            return
+
+        downloaded_layers = task.data
+        self.download_finished()
+        for layer in downloaded_layers:
+            ok = LayerManager.add_offline_layer(layer)
+            if not ok:
+                # TODO: log failure?
+                pass
 
     def _selected_items(
         self,

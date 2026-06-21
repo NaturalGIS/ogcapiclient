@@ -37,3 +37,15 @@ class CrsNormalizationError(Exception):
     """Raised when a CRS string cannot be resolved to a valid, recognised CRS."""
 
     pass
+
+
+class InvalidLayerError(Exception):
+    """Raised when an invalid layer created from the URI sring."""
+
+    pass
+
+
+class WriteDataError(Exception):
+    """Raised when writing data to cache fails."""
+
+    pass
