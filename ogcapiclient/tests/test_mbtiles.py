@@ -51,9 +51,16 @@ class TestMbBTilesWriter(unittest.TestCase):
         self.assertIn("metadata", tables)
         self.assertIn("tiles", tables)
 
-    def test_create_returns_false_on_existing_file(self):
+    def test_create_returns_true_on_existing_empty_file(self):
         with open(self.file_path, "wb") as f:
             f.write(b"")
+
+        writer = MbTilesWriter(self.file_path)
+        self.assertTrue(writer.create())
+
+    def test_create_returns_false_on_existing_nonempty_file(self):
+        with open(self.file_path, "wb") as f:
+            f.write(b"test-data")
 
         writer = MbTilesWriter(self.file_path)
         self.assertFalse(writer.create())

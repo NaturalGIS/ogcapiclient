@@ -25,7 +25,7 @@ class MbTilesWriter:
         if self.conn is not None:
             return False
 
-        if os.path.exists(self.file_path):
+        if os.path.exists(self.file_path) and os.path.getsize(self.file_path) > 0:
             return False
 
         self.conn = sqlite3.connect(self.file_path)
@@ -54,7 +54,7 @@ class MbTilesWriter:
             raise MbTilesError("MBTiles writer is not initialized.")
 
         params = (key, value)
-        self.conn.execute("insert into metadata values (?, ?)", params)
+        self.conn.execute("INSERT INTO metadata VALUES (?, ?)", params)
         self.conn.commit()
 
     def set_tile_data(self, z: int, x: int, y: int, data: bytes) -> None:
@@ -76,7 +76,7 @@ class MbTilesWriter:
             raise MbTilesError("MBTiles writer is not initialized.")
 
         params = (z, x, y, data)
-        self.conn.execute("insert or replace into tiles values (?, ?, ?, ?)", params)
+        self.conn.execute("INSERT OR REPLACE INTO tiles VALUES (?, ?, ?, ?)", params)
         self.conn.commit()
 
     def close(self) -> None:
