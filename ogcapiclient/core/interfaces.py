@@ -23,7 +23,7 @@ class Loader(Protocol):
         """
         ...
 
-    def get_data(self, url: str, auth_cfg: str | None) -> object:
+    def get_data(self, url: str, auth_cfg: str | None) -> bytes:
         """Fetches data from the given URL.
 
         :param url: The full URL to the data.
@@ -32,7 +32,7 @@ class Loader(Protocol):
         :type auth_cfg: str, None
 
         :returns: The reply content.
-        :rtype: object
+        :rtype: bytes
 
         :raises OgcApiClientError: On any network, server, decode, or parse error.
         """

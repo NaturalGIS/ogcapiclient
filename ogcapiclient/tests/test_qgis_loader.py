@@ -6,7 +6,7 @@ import unittest
 
 from qgis.core import QgsFeedback
 
-from ogcapiclient.core.enums import ClientError
+from ogcapiclient.core.enums import ClientError, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.qgis_backend.loader import QgisLoader
 from ogcapiclient.tests.mocked_webserver import MockedWebServer
@@ -22,6 +22,16 @@ class MockFeedback(QgsFeedback):
 
     def set_progress(self, progress: float) -> None:
         pass
+
+
+class MockLogger:
+    """Mocks the logger and stores messages for assertion."""
+
+    def __init__(self):
+        self.messages: list[tuple[LogLevel, str]] = []
+
+    def log(self, message: str, level: LogLevel = LogLevel.INFO) -> None:
+        self.messages.append((level, message))
 
 
 class TestQgisLoader(unittest.TestCase):
@@ -86,13 +96,13 @@ class TestQgisLoader(unittest.TestCase):
 
         self.assertEqual(ctx.exception.error_code, ClientError.SERVER_ERROR)
 
-    def test_empty_body_raises_parse_error(self):
+    def test_empty_body_raises_empty_response_error(self):
         self.server.handler.add_route("GET", "/empty", 200, b"", "application/json")
 
         with self.assertRaises(OgcApiClientError) as ctx:
             self.loader.get_json(f"{self.server.base_url}/empty")
 
-        self.assertEqual(ctx.exception.error_code, ClientError.PARSE_ERROR)
+        self.assertEqual(ctx.exception.error_code, ClientError.EMPTY_RESPONSE)
 
     def test_invalid_json_raises_parse_error(self):
         self.server.handler.add_route(
@@ -117,7 +127,7 @@ class TestQgisLoader(unittest.TestCase):
         self.server.handler.add_json_route("/slow", {"ok": True}, delay=2.0)
 
         feedback = MockFeedback()
-        loader = QgisLoader(feedback)
+        loader = QgisLoader(feedback=feedback)
         result = {}
 
         def run():
@@ -137,7 +147,7 @@ class TestQgisLoader(unittest.TestCase):
         self.assertFalse(thread.is_alive(), "Request thread did not finish in time")
 
         error = result.get("error")
-        self.assertIsNotNone(error, "Expected an OgcApiClientError but got none")
+        self.assertIsNotNone(error)
         self.assertEqual(error.error_code, ClientError.CANCELLED)
 
     def test_pre_cancelled_feedback_cancels_immediately(self):
@@ -145,13 +155,40 @@ class TestQgisLoader(unittest.TestCase):
 
         feedback = MockFeedback()
         feedback.cancel()
-        loader = QgisLoader(feedback)
+        loader = QgisLoader(feedback=feedback)
 
         with self.assertRaises(OgcApiClientError) as ctx:
             loader.get_json(f"{self.server.base_url}/collections")
 
         self.assertEqual(ctx.exception.error_code, ClientError.CANCELLED)
         self.server.handler.assert_request_count(0)
+
+    def test_get_data_returns_bytes(self):
+        raw_payload = b"raw binary data or image contents"
+        self.server.handler.add_route(
+            "GET", "/bytes", 200, raw_payload, "application/octet-stream"
+        )
+
+        result = self.loader.get_data(f"{self.server.base_url}/bytes")
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, bytes)
+        self.assertEqual(result, raw_payload)
+
+    def test_logger(self):
+        mock_logger = MockLogger()
+        loader_with_logger = QgisLoader(logger=mock_logger)
+
+        self.server.handler.add_error_route(
+            "/broken-route", 500, "Internal Server Error"
+        )
+
+        with self.assertRaises(OgcApiClientError):
+            loader_with_logger.get_json(f"{self.server.base_url}/broken-route")
+
+        self.assertTrue(len(mock_logger.messages) > 0)
+        log_level, log_msg = mock_logger.messages[0]
+        self.assertEqual(log_level, LogLevel.INFO)
+        self.assertIn("HTTP request failed", log_msg)
 
 
 if __name__ == "__main__":
