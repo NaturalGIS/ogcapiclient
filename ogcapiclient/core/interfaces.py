@@ -23,6 +23,21 @@ class Loader(Protocol):
         """
         ...
 
+    def get_data(self, url: str, auth_cfg: str | None) -> object:
+        """Fetches data from the given URL.
+
+        :param url: The full URL to the data.
+        :type url: str
+        :param auth_cfg: QGIS Authentication configuration ID.
+        :type auth_cfg: str, None
+
+        :returns: The reply content.
+        :rtype: object
+
+        :raises OgcApiClientError: On any network, server, decode, or parse error.
+        """
+        ...
+
 
 class Logger(Protocol):
     """Writes diagnostic messages to an appropriate output."""
