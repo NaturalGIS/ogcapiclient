@@ -59,11 +59,13 @@ class OgcApiClient:
         :raises OgcApiClientError: On any network, decode, or parse failure, or if
         the operation is cancelled.
         """
+        self.logger.log(f"Discovering {url}.")
         self.feedback.set_progress(0)
         self._check_canceled()
 
         landing_page = self.get_landing_page(url)
         if not landing_page:
+            self.logger.log("Empty body returned for landing page request.")
             raise OgcApiClientError(
                 ClientError.EMPTY_RESPONSE,
                 "Empty body returned for landing page request.",
@@ -74,16 +76,18 @@ class OgcApiClient:
 
         server_title = landing_page.get("title", "")
 
-        self.logger.log(f"Resolving conformance and collections URLs.")
+        self.logger.log("Resolving conformance and collections URLs.")
 
         links = parse_links(landing_page.get("links", []))
         collections_url = find_link(links, "data", ["application/json"]) or find_link(
             links, "http://www.opengis.net/def/rel/ogc/1.0/data", ["application/json"]
         )
         if not collections_url:
+            self.logger.log("No collections link found on landing page.")
             raise OgcApiClientError(
                 ClientError.PARSE_ERROR, "No collections link found on landing page."
             )
+        self.logger.log(f"Collections link {collections_url}.")
 
         conformance_url = find_link(
             links, "conformance", ["application/json"]
@@ -97,16 +101,18 @@ class OgcApiClient:
             try:
                 conformance = self.get_conformance(conformance_url)
                 conformance_classes = conformance.get("conformsTo", [])
+                self.logger.log(f"Conformance link {conformance_url}.")
             except OgcApiClientError as e:
-                self.logger.log(f"Conformance request failed: {e}", LogLevel.WARNING)
+                self.logger.log(f"Conformance request failed: {e}.", LogLevel.WARNING)
         else:
-            self.logger.log(f"No conformance link found on landing page.")
+            self.logger.log("No conformance link found on landing page.")
 
         self.feedback.set_progress(10)
         self._check_canceled()
 
         collections = self.get_collections(collections_url)
         if not collections:
+            self.logger.log("Empty body returned for collections page request.")
             raise OgcApiClientError(
                 ClientError.EMPTY_RESPONSE,
                 "Empty body returned for collections page request.",
@@ -115,7 +121,7 @@ class OgcApiClient:
         self.feedback.set_progress(20)
         self._check_canceled()
 
-        self.logger.log(f"Parsing collections.")
+        self.logger.log("Parsing collections.")
 
         raw_collections = collections.get("collections", [])
 
@@ -161,6 +167,7 @@ class OgcApiClient:
 
         :raises OgcApiClientError: If the process is canceled or hits network errors.
         """
+        self.logger.log("Fetching additional details for collections.")
         prepared_layers: list[PreparedLayer] = []
 
         collections_count = len(collections)
@@ -187,7 +194,7 @@ class OgcApiClient:
                 tiles_url = collection.capabilities.get(collection_type)
                 if not tiles_url:
                     self.logger.log(
-                        f"Missing tiles URL for collection {collection.id}",
+                        f"Missing tiles URL for collection {collection.id}.",
                         LogLevel.WARNING,
                     )
                     continue
@@ -201,10 +208,11 @@ class OgcApiClient:
                     mime_types = ["image/png", "image/jpeg", "image/webp"]
 
                 tilesets = self.get_tilesets(tiles_url)
+                self.logger.log(f"Parsing tilesets for {collection.id}.")
                 parsed_tilesets = parse_tilesets(tilesets, mime_types)
                 if not parsed_tilesets:
                     self.logger.log(
-                        f"No tileset found for collection {collection.id}",
+                        f"No tileset found for collection {collection.id}.",
                         LogLevel.WARNING,
                     )
                     continue
@@ -295,6 +303,19 @@ class OgcApiClient:
         """
         self.logger.log(f"Fetching tilesets: {url}")
         return self.loader.get_json(url, self.auth_cfg)
+
+    def get_tile(self, url: str) -> bytes:
+        """Performs tilesets request on an OGC API server.
+
+        :param url: The URL of the tiles page.
+        :type url: str
+
+        :returns: The raw tilesets data.
+        :rtype: bytes
+
+        :raises OgcApiClientError: On network or parse failure.
+        """
+        return self.loader.get_data(url, self.auth_cfg)
 
     def _check_canceled(self) -> None:
         """Checks if operation should be terminated.
