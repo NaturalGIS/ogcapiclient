@@ -24,4 +24,5 @@ OGC_TILE_MATRIX_SET_ID = "{tileMatrixSetId}"
 
 QGIS_X = "{x}"
 QGIS_Y = "{y}"
+QGIS_INVERTED_Y = "{-y}"
 QGIS_Z = "{z}"

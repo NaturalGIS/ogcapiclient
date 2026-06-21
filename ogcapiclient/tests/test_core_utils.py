@@ -8,6 +8,7 @@ from ogcapiclient.core.utils import (
     cache_path,
     create_uri_parts,
     find_link,
+    format_tile_url,
     hash_data,
     parse_collection,
     parse_extent,
@@ -1185,6 +1186,75 @@ class TestCachePath(unittest.TestCase):
         p1 = cache_path("/c", bbox="0.000000,0.000000,1.000000,1.000000", **kwargs)
         p2 = cache_path("/c", bbox="0.000000,0.000000,2.000000,2.000000", **kwargs)
         self.assertNotEqual(p1, p2)
+
+
+class TestFormatTileUrl(unittest.TestCase):
+    def test_basic_substitution(self):
+        result = format_tile_url("{z}/{x}/{y}", 3, 5, 10, 1024)
+        self.assertEqual(result, "10/3/5")
+
+    def test_x_zero(self):
+        result = format_tile_url("{z}/{x}/{y}", 0, 7, 4, 16)
+        self.assertEqual(result, "4/0/7")
+
+    def test_y_zero(self):
+        result = format_tile_url("{z}/{x}/{y}", 2, 0, 3, 8)
+        self.assertEqual(result, "3/2/0")
+
+    def test_z_zero(self):
+        result = format_tile_url("{z}/{x}/{y}", 0, 0, 0, 1)
+        self.assertEqual(result, "0/0/0")
+
+    def test_large_coordinates(self):
+        result = format_tile_url("{z}/{x}/{y}", 131072, 98304, 18, 262144)
+        self.assertEqual(result, "18/131072/98304")
+
+    def test_full_https_url(self):
+        template = "https://tiles.example.com/tilesets/dem/{z}/{x}/{y}.png"
+        result = format_tile_url(template, 4, 6, 5, 32)
+        self.assertEqual(result, "https://tiles.example.com/tilesets/dem/5/4/6.png")
+
+    def test_url_with_query_parameters(self):
+        template = "https://api.example.com/tiles/{z}/{x}/{y}?format=png&apikey=abc"
+        result = format_tile_url(template, 1, 2, 3, 8)
+        self.assertEqual(
+            result, "https://api.example.com/tiles/3/1/2?format=png&apikey=abc"
+        )
+
+    def test_basic_tms_flip(self):
+        result = format_tile_url("{z}/{x}/{-y}", 3, 2, 4, 8)
+        self.assertEqual(result, "4/3/5")
+
+    def test_tms_flip_y_at_zero(self):
+        result = format_tile_url("{z}/{x}/{-y}", 0, 0, 2, 4)
+        self.assertEqual(result, "2/0/3")
+
+    def test_tms_flip_y_at_max(self):
+        result = format_tile_url("{z}/{x}/{-y}", 0, 7, 3, 8)
+        self.assertEqual(result, "3/0/0")
+
+    def test_tms_flip_matrix_height_1(self):
+        result = format_tile_url("{z}/{x}/{-y}", 0, 0, 0, 1)
+        self.assertEqual(result, "0/0/0")
+
+    def test_tms_flip_full_url(self):
+        template = "https://tiles.example.com/layer/{z}/{x}/{-y}.pbf"
+        result = format_tile_url(template, 10, 3, 5, 32)
+        self.assertEqual(result, "https://tiles.example.com/layer/5/10/28.pbf")
+
+    def test_tms_template_does_not_leave_literal_y_token(self):
+        result = format_tile_url("{z}/{x}/{-y}", 1, 2, 3, 10)
+        self.assertNotIn("{y}", result)
+        self.assertNotIn("{-y}", result)
+
+    def test_xyz_template_does_not_trigger_tms_branch(self):
+        result = format_tile_url("{z}/{x}/{y}", 1, 2, 3, 10)
+        self.assertEqual(result, "3/1/2")
+
+    def test_no_token_mutation_on_unrelated_text(self):
+        template = "https://example.com/{z}/{x}/{y}?style=default&tile-y=fixed"
+        result = format_tile_url(template, 1, 5, 7, 128)
+        self.assertEqual(result, "https://example.com/7/1/5?style=default&tile-y=fixed")
 
 
 if __name__ == "__main__":

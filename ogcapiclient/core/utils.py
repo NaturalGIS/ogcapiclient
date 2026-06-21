@@ -11,6 +11,7 @@ from ogcapiclient.core.constants import (
     OGC_TILE_MATRIX,
     OGC_TILE_MATRIX_SET_ID,
     OGC_TILE_ROW,
+    QGIS_INVERTED_Y,
     QGIS_X,
     QGIS_Y,
     QGIS_Z,
@@ -347,7 +348,7 @@ def create_uri_parts(
     :type crs: str
     :param auth_cfg: QGIS authentication configuration ID.
     :type auth_cfg: str
-    :returns: A dictionary containing information for building layer URI.
+    :returns: A dictionary with data source URI building blocks.
     :rtype: dict[str, str]
     """
     parts = {}
@@ -365,7 +366,7 @@ def create_uri_parts(
 
 
 def hash_data(value: str) -> str:
-    """Returns the first 8 hex characters of the MD5 hash of value.
+    """Returns the first 8 hex characters of the SHA-256 hash of value.
 
     :param value: String to hash.
     :type value: str
@@ -436,3 +437,30 @@ def cache_path(
         hash_data(bbox),
         f"data.{suffix}",
     )
+
+
+def format_tile_url(
+    url_template: str, column: int, row: int, zoom_level: int, matrix_height: int
+) -> str:
+    """Returns tile URL from the templated URL.
+
+    :param url_template: Templated tiles URL.
+    :type url_template: str
+    :param colunn: Tile column.
+    :type column: int
+    :param row: Tile row.
+    :type row: int
+    :param zoom_level: Tile zoom level.
+    :type zoom_level: int
+    :param matrix_height: Number of rows of the tile matrix.
+    :type matrix_height: int
+    :returns: Download URL for the input tile.
+    :rtype: str
+    """
+    out_url = url_template.replace(QGIS_X, f"{column}")
+    if QGIS_INVERTED_Y in out_url:
+        out_url = out_url.replace(QGIS_INVERTED_Y, f"{matrix_height - row - 1}")
+    else:
+        out_url = out_url.replace(QGIS_Y, f"{row}")
+    out_url = out_url.replace(QGIS_Z, f"{zoom_level}")
+    return out_url

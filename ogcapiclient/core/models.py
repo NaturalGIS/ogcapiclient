@@ -67,7 +67,7 @@ class Collection:
     """Supported OGC API building blocks and their endpoints."""
     supported_crs: list[str] = field(default_factory=list)
     """List of CRSs supported for querying or output."""
-    description: str | None = None
+    description: str = ""
     """A detailed text description of the collection's contents."""
     storage_crs: str | None = None
     """The CRS used to natively store the data."""
