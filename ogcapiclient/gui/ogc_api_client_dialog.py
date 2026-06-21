@@ -7,6 +7,8 @@ from qgis.PyQt.QtCore import QItemSelectionModel, QModelIndex, Qt, QUrl
 from qgis.PyQt.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
 
+from ogcapiclient.core.enums import CollectionType
+from ogcapiclient.core.models import Collection
 from ogcapiclient.gui.constants import (
     MAXIMUM_ABSTRACT_WIDTH,
     MAXIMUM_COLUMN_WIDTH,
@@ -14,6 +16,8 @@ from ogcapiclient.gui.constants import (
 )
 from ogcapiclient.gui.enums import CollectionModelColumn
 from ogcapiclient.gui.utils import collection_type_to_string
+from ogcapiclient.qgis_backend.layer_manager import LayerManager
+from ogcapiclient.qgis_backend.tasks.layer_preparation_task import LayerPreparationTask
 from ogcapiclient.qgis_backend.tasks.ogc_discovery_task import OgcDiscoveryTask
 
 PLUGIN_PATH = os.path.split(os.path.dirname(__file__))[0]
@@ -120,10 +124,11 @@ class OgcApiClientDialog(BASE, WIDGET):
         :param previous: The previously selected model index.
         :type previous: QModelIndex
         """
-        if current.isValid():
+        if current.isValid() and self.task is None:
             self.button_add.setEnabled(True)
 
     def open_help(self) -> None:
+        """Opens plugin documentation."""
         QDesktopServices.openUrl(
             QUrl.fromLocalFile(os.path.join(PLUGIN_PATH, "help", "ogcapiclient.pdf"))
         )
@@ -261,4 +266,90 @@ class OgcApiClientDialog(BASE, WIDGET):
             )
 
     def prepare_layers(self):
+        """Prepares selected collections for adding to the project."""
+        current_index = self.collections_tree.selectionModel().currentIndex()
+        if not current_index.isValid():
+            return
+
+        if self.button_online.isChecked():
+            self.online_mode()
+        else:
+            self.offline_mode()
+
+    def online_mode(self):
+        """Prepares selected collections for addition to the project in online mode."""
+        crs_map, items = self._selected_items()
+
+        if not items:
+            return
+
+        self.button_add.setEnabled(False)
+
+        auth_cfg = self.auth_widget.configId()
+
+        self.task = LayerPreparationTask(
+            self.discovery_result.url, items, crs_map, auth_cfg
+        )
+        self.task.taskTerminated.connect(self.layer_preparation_finished)
+        self.task.taskCompleted.connect(self.add_online_layers)
+
+        self.task_manager.addTask(self.task)
+
+    def layer_preparation_finished(self) -> None:
+        """Triggered when layers preparation finished."""
+        task = self.sender()
+        if self.task == task:
+            self.button_add.setEnabled(True)
+
+            if task.isCanceled():
+                QMessageBox.information(
+                    None, self.tr("Canceled"), self.tr("Operation was canceled.")
+                )
+            if not task.isCanceled() and task.exception:
+                QMessageBox.critical(
+                    None,
+                    self.tr("Error"),
+                    self.tr(
+                        "An error occured when loading layer(s). Check Message Log for more details."
+                    ),
+                )
+            self.task = None
+
+    def add_online_layers(self) -> None:
+        """Adds collections to QGIS in online mode."""
+        task = self.sender()
+        if self.task != task:
+            return
+
+        bbox = self.group_extent.outputExtent()
+
+        prepared_layers = task.data
+        self.layer_preparation_finished()
+        for layer in prepared_layers:
+            ok = LayerManager.add_online_layer(layer, bbox)
+            if not ok:
+                # TODO: log failure?
+                pass
+
+    def offline_mode(self):
+        """Prepares selected collections for addition to the project in offline mode."""
         pass
+
+    def _selected_items(
+        self,
+    ) -> tuple[dict[str, str], list[tuple[Collection, CollectionType]]]:
+        layers_to_prepare = []
+        crs_map = {}
+        selected_indexes = self.collections_tree.selectionModel().selectedRows()
+        for index in selected_indexes:
+            item = self.model.itemFromIndex(index)
+            data = item.data(Qt.ItemDataRole.UserRole)
+            if data:
+                collection, collection_type = data
+                layers_to_prepare.append((collection, collection_type))
+                crs_map[collection.id] = (
+                    self.available_crs.get(collection.id, ["EPSG:4326"])[0]
+                    if collection_type == CollectionType.FEATURES
+                    else "EPSG:3857"
+                )
+        return crs_map, layers_to_prepare
