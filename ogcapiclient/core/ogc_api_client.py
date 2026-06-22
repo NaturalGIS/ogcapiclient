@@ -1,7 +1,10 @@
 """OGC API client.
 
-Stateless HTTP helper that performs a discovery workflow: landing page - conformance - collections
-and provides methods to retrieve tilesets for a collection and download individual tiles.
+Stateless HTTP helper that performs a discovery workflow:
+landing page - conformance - collections.
+
+Also provides methods to retrieve tilesets for a collection
+and download individual tiles.
 """
 
 from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
@@ -21,8 +24,8 @@ from ogcapiclient.core.utils import (
 class OgcApiClient:
     """Client for interacting with OGC API servers.
 
-    Fetches the landing page, conformance classes, and collections from an OGC API endpoint
-    and returns structured result.
+    Fetches the landing page, conformance classes, and collections
+    from an OGC API endpoint and returns structured result.
     """
 
     def __init__(

@@ -4,7 +4,7 @@ from qgis.core import QgsRectangle, QgsTileRange
 
 from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.exceptions import CrsNormalizationError
-from ogcapiclient.core.models import PreparedLayer, TileSet
+from ogcapiclient.core.models import PreparedLayer
 from ogcapiclient.qgis_backend.utils import (
     collect_tiles,
     create_layer_uri,
@@ -182,7 +182,6 @@ class TestCreateLayerUri(unittest.TestCase):
     # authcfg is ommited from URL
     @unittest.expectedFailure
     def test_features_auth_cfg_present(self):
-        layer = _features_layer(auth_cfg="testAuthId")
         uri = create_layer_uri(_features_layer(auth_cfg="testAuthId"))
         self.assertIn("testAuthId", uri)
 

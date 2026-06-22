@@ -1,7 +1,6 @@
 """Dataclasses shared across the OGC API client core."""
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from ogcapiclient.core.enums import CollectionType
 
@@ -115,12 +114,11 @@ class PreparedLayer:
         """Returns the QGIS provider key based on the collection type."""
         if self.collection_type == CollectionType.FEATURES:
             return "oapif"
-        elif self.collection_type == CollectionType.TILES_RASTER:
+        if self.collection_type == CollectionType.TILES_RASTER:
             return "wms"
-        elif self.collection_type == CollectionType.TILES_VECTOR:
+        if self.collection_type == CollectionType.TILES_VECTOR:
             return "xyzvectortiles"
-        else:
-            return ""
+        return ""
 
 
 @dataclass
@@ -179,9 +177,8 @@ class DownloadedLayer:
         """Returns the QGIS provider key based on the collection type."""
         if self.collection_type == CollectionType.FEATURES:
             return "ogr"
-        elif self.collection_type == CollectionType.TILES_RASTER:
+        if self.collection_type == CollectionType.TILES_RASTER:
             return "wms"
-        elif self.collection_type == CollectionType.TILES_VECTOR:
+        if self.collection_type == CollectionType.TILES_VECTOR:
             return "xyzvectortiles"
-        else:
-            return ""
+        return ""

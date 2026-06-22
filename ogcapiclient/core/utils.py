@@ -118,7 +118,8 @@ def parse_extent(extent: dict) -> BoundingBox | None:
 
     :param extent: Raw extent dictionary.
     :type links: dict
-    :returns: A BoundingBox built from the first bbox entry, or None if the data is absent or malformed.
+    :returns: A BoundingBox built from the first bbox entry,
+    or None if the data is absent or malformed.
     :rtype: BoundingBox | None
     """
     if not isinstance(extent, dict) or not extent:
@@ -151,7 +152,7 @@ def parse_extent(extent: dict) -> BoundingBox | None:
             y_max=float(y_max),
             crs=crs,
         )
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError):
         return None
 
 
@@ -179,16 +180,12 @@ def parse_collection(collection: dict) -> Collection | None:
     bbox = parse_extent(collection.get("extent", {}))
 
     crs = collection.get("crs", [])
-    if isinstance(crs, list):
-        supported_crs = [str(i) for i in crs]
-    else:
-        supported_crs = []
-
+    supported_crs = [str(i) for i in crs] if isinstance(crs, list) else []
     if not supported_crs:
         supported_crs = ["http://www.opengis.net/def/crs/OGC/1.3/CRS84"]
 
     crs = str(collection.get("storageCrs", ""))
-    storage_crs = crs if crs else None
+    storage_crs = crs or None
 
     capabilities: dict[CollectionType, str] = {}
 
@@ -276,8 +273,7 @@ def create_template_url(template: str, tms_id: str) -> str:
     url = template.replace(OGC_TILE_MATRIX_SET_ID, tms_id)
     url = url.replace(OGC_TILE_MATRIX, QGIS_Z)
     url = url.replace(OGC_TILE_ROW, QGIS_Y)
-    url = url.replace(OGC_TILE_COL, QGIS_X)
-    return url
+    return url.replace(OGC_TILE_COL, QGIS_X)
 
 
 def parse_tilesets(data: dict, preferable_types: list[str] = None) -> list[TileSet]:
@@ -334,7 +330,8 @@ def create_uri_parts(
     crs: str | None = None,
     auth_cfg: str | None = None,
 ) -> dict[str, str]:
-    """Creates dictionary with parts required to build a connection string for collection.
+    """Creates dictionary with parts required to build
+    a connection string for collection.
 
     :param collection_id: Collection ID.
     :type collection_id: str
@@ -354,9 +351,10 @@ def create_uri_parts(
     parts = {}
     if collection_type == CollectionType.FEATURES:
         parts = {"url": landing_page_url, "typename": collection_id, "srsname": crs}
-    elif collection_type == CollectionType.TILES_RASTER:
-        parts = {"url": tileset.url_template, "type": "xyz"}
-    elif collection_type == CollectionType.TILES_VECTOR:
+    elif (
+        collection_type == CollectionType.TILES_RASTER
+        or collection_type == CollectionType.TILES_VECTOR
+    ):
         parts = {"url": tileset.url_template, "type": "xyz"}
 
     if auth_cfg:
@@ -389,7 +387,7 @@ def sanitize_string(string: str) -> str:
     safe_string = re.sub(r"_+", "_", safe_string)
     safe_string = safe_string.strip("_")
 
-    return safe_string if safe_string else "dummy"
+    return safe_string or "dummy"
 
 
 def cache_path(
@@ -462,5 +460,4 @@ def format_tile_url(
         out_url = out_url.replace(QGIS_INVERTED_Y, f"{matrix_height - row - 1}")
     else:
         out_url = out_url.replace(QGIS_Y, f"{row}")
-    out_url = out_url.replace(QGIS_Z, f"{zoom_level}")
-    return out_url
+    return out_url.replace(QGIS_Z, f"{zoom_level}")

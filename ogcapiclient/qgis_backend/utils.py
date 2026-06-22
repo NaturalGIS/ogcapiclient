@@ -5,7 +5,6 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsCoordinateTransformContext,
     QgsDataSourceUri,
-    QgsProject,
     QgsProviderRegistry,
     QgsRectangle,
     QgsTileMatrixSet,
@@ -78,8 +77,7 @@ def create_layer_uri(layer: PreparedLayer, bbox: QgsRectangle = None) -> str:
 
     if layer.collection_type == CollectionType.FEATURES:
         return ds_uri.uri()
-    else:
-        return ds_uri.encodedUri().data().decode("utf-8")
+    return ds_uri.encodedUri().data().decode("utf-8")
 
 
 def rectangle_to_string(bbox: QgsRectangle) -> str:
@@ -92,7 +90,10 @@ def rectangle_to_string(bbox: QgsRectangle) -> str:
     :returns: String representation of the input bbox.
     :rtype: str
     """
-    return f"{bbox.xMinimum():.6f},{bbox.yMinimum():.6f},{bbox.xMaximum():.6f},{bbox.yMaximum():.6f}"
+    return (
+        f"{bbox.xMinimum():.6f},{bbox.yMinimum():.6f},"
+        f"{bbox.xMaximum():.6f},{bbox.yMaximum():.6f}"
+    )
 
 
 def sanitize_crs_string(crs_string: str) -> str:
@@ -143,7 +144,7 @@ def collect_tiles(
     tile_matrix_set = QgsTileMatrixSet()
     tile_matrix_set.addGoogleCrs84QuadTiles(0, max_zoom)
     tile_count = 0
-    tile_ranges = dict()
+    tile_ranges = {}
     for i in range(max_zoom + 1):
         tile_matrix = tile_matrix_set.tileMatrix(i)
         tile_range = tile_matrix.tileRangeFromExtent(extent)

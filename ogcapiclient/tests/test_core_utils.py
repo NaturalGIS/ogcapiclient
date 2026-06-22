@@ -1197,23 +1197,23 @@ class TestCachePath(unittest.TestCase):
         self.assertTrue(result.endswith("data.mbtiles"))
 
     def test_different_server_urls_produce_different_paths(self):
-        kwargs = dict(
-            collection_id="col",
-            crs="EPSG4326",
-            bbox="0,0,1,1",
-            collection_type=CollectionType.FEATURES,
-        )
+        kwargs = {
+            "collection_id": "col",
+            "crs": "EPSG4326",
+            "bbox": "0,0,1,1",
+            "collection_type": CollectionType.FEATURES,
+        }
         p1 = cache_path("/c", "http://server-a.com", **kwargs)
         p2 = cache_path("/c", "http://server-b.com", **kwargs)
         self.assertNotEqual(p1, p2)
 
     def test_different_bboxes_produce_different_paths(self):
-        kwargs = dict(
-            server_url="http://example.com",
-            collection_id="col",
-            crs="EPSG4326",
-            collection_type=CollectionType.FEATURES,
-        )
+        kwargs = {
+            "server_url": "http://example.com",
+            "collection_id": "col",
+            "crs": "EPSG4326",
+            "collection_type": CollectionType.FEATURES,
+        }
         p1 = cache_path("/c", bbox="0.000000,0.000000,1.000000,1.000000", **kwargs)
         p2 = cache_path("/c", bbox="0.000000,0.000000,2.000000,2.000000", **kwargs)
         self.assertNotEqual(p1, p2)

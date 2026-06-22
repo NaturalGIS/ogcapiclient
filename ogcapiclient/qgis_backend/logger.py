@@ -3,7 +3,6 @@
 from qgis.core import Qgis, QgsMessageLog
 
 from ogcapiclient.core.enums import LogLevel
-from ogcapiclient.core.interfaces import Logger
 
 
 class QgisLogger:

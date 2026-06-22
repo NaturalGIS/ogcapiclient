@@ -112,7 +112,7 @@ class TestOgcApiClient(unittest.TestCase):
         self.assertEqual(result.title, "Test OGC API")
 
     def test_ogc_api_calls_order(self):
-        result = self.client.connect(self.base_url)
+        _ = self.client.connect(self.base_url)
 
         called_urls = [call[0] for call in self.loader.calls]
         self.assertEqual(

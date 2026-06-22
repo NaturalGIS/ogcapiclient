@@ -44,7 +44,8 @@ WIDGET, BASE = uic.loadUiType(
 class OgcApiClientDialog(BASE, WIDGET):
     """Main dialog of the plugin.
 
-    Provides the interface for server connection, AOI selection, and collection browsing.
+    Provides the interface for server connection, AOI selection,
+    and collection browsing.
     """
 
     def __init__(self, iface: QgisInterface, parent: QWidget = None) -> None:
@@ -192,7 +193,8 @@ class OgcApiClientDialog(BASE, WIDGET):
                     None,
                     self.tr("Error"),
                     self.tr(
-                        "An error occured when connecting to the server. Check Message Log for more details."
+                        "An error occured when connecting to the server. "
+                        "Check Message Log for more details."
                     ),
                 )
             self.progress_bar.setValue(-1)
@@ -202,7 +204,9 @@ class OgcApiClientDialog(BASE, WIDGET):
             self.task = None
 
     def update_collections(self) -> None:
-        """Populates collections tree view with the collections returned by the server."""
+        """Populates collections tree view with the collections
+        returned by the server.
+        """
         task = self.sender()
         if self.task != task:
             return
@@ -324,7 +328,8 @@ class OgcApiClientDialog(BASE, WIDGET):
                     None,
                     self.tr("Error"),
                     self.tr(
-                        "An error occured when loading layer(s). Check Message Log for more details."
+                        "An error occured when loading layer(s). "
+                        "Check Message Log for more details."
                     ),
                 )
             self.task = None
@@ -377,7 +382,8 @@ class OgcApiClientDialog(BASE, WIDGET):
                     None,
                     self.tr("Cached data found"),
                     self.tr(
-                        "Data for this collection has already been downloaded. Would you like to use the existing data?"
+                        "Data for this collection has already been downloaded. "
+                        "Would you like to use the existing data?"
                     ),
                     QMessageBox.StandardButton.Yes
                     | QMessageBox.StandardButton.No
@@ -390,7 +396,7 @@ class OgcApiClientDialog(BASE, WIDGET):
                         )
                     )
                     continue
-                elif answer == QMessageBox.StandardButton.Cancel:
+                if answer == QMessageBox.StandardButton.Cancel:
                     return
 
             if item.tile_count > TILE_COUNT_THRESHOLD:
@@ -398,7 +404,8 @@ class OgcApiClientDialog(BASE, WIDGET):
                     None,
                     self.tr("Large tile count"),
                     self.tr(
-                        "Downloading selected area requires approximately {count} tiles. Do you want to proceed?"
+                        "Downloading selected area requires approximately"
+                        "{count} tiles. Do you want to proceed?"
                     ).format(count=item.tile_count),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
@@ -446,7 +453,8 @@ class OgcApiClientDialog(BASE, WIDGET):
                     None,
                     self.tr("Error"),
                     self.tr(
-                        "An error occured when downloading data. Check Message Log for more details."
+                        "An error occured when downloading data. "
+                        "Check Message Log for more details."
                     ),
                 )
             self.task = None

@@ -175,7 +175,12 @@ class TestMbBTilesWriter(unittest.TestCase):
         writer.set_tile_data(5, 10, 15, b"data")
 
         conn = sqlite3.connect(self.file_path)
-        sql = "SELECT tile_data FROM tiles WHERE zoom_level=5 AND tile_column=10 AND tile_row=15"
+        sql = (
+            "SELECT tile_data FROM tiles "
+            "WHERE zoom_level=5 AND "
+            "tile_column=10 AND "
+            "tile_row=15"
+        )
         row = conn.execute(sql).fetchone()
         conn.close()
 

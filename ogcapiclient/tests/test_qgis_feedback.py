@@ -1,6 +1,6 @@
 import unittest
 
-from qgis.core import QgsApplication, QgsTask
+from qgis.core import QgsTask
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtTest import QSignalSpy
 
@@ -39,11 +39,11 @@ class TestQgiskFeedback(unittest.TestCase):
 
         self.assertTrue(feedback.is_canceled())
 
-    def test_task_cancel_propagates_to_task(self):
+    def test_cancel_propagates_to_task(self):
         task = DummyTask()
         feedback = QgisFeedback(task)
 
-        task.cancel()
+        feedback.cancel()
         QCoreApplication.processEvents()
 
         self.assertTrue(task.isCanceled())
@@ -61,7 +61,6 @@ class TestQgiskFeedback(unittest.TestCase):
         task = DummyTask()
         feedback = QgisFeedback(task)
 
-        initial_progress = task.progress()
         feedback.set_progress(50.0)
 
         self.assertEqual(task.progress(), 50.0)

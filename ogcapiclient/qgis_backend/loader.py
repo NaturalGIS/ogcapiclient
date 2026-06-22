@@ -1,5 +1,6 @@
 """Implementation of the Loader protocol with QGIS network classes."""
 
+import contextlib
 import json
 
 from qgis.core import QgsBlockingNetworkRequest, QgsFeedback
@@ -176,10 +177,8 @@ class QgisLoader:
             return data
         finally:
             if self.feedback:
-                try:
+                with contextlib.suppress(TypeError):
                     self.feedback.canceled.disconnect(request_feedback.cancel)
-                except TypeError:
-                    pass
 
     def _log(self, message: str, level: LogLevel = LogLevel.INFO):
         """Helper to log messages.

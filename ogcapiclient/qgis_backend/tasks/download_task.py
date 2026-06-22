@@ -75,9 +75,9 @@ class DownloadTask(QgsTask):
         self.landing_page = landing_page
         self.collections = collections
         self.auth_cfg = auth_cfg
-        self.feedback = feedback if feedback else QgisFeedback(self)
-        self.logger = logger if logger else QgisLogger()
-        self.loader = loader if loader else QgisLoader(self.logger, self.feedback)
+        self.feedback = feedback or QgisFeedback(self)
+        self.logger = logger or QgisLogger()
+        self.loader = loader or QgisLoader(self.logger, self.feedback)
         self.data = None
         self.exception = None
 
@@ -136,7 +136,8 @@ class DownloadTask(QgsTask):
         :type item: OfflineDownload
         :returns: Structured object describing oflline layer.
         :rtype: DownloadedLayer
-        :raises InvalidLayerError: When vector layer can not be constructed for collection.
+        :raises InvalidLayerError: When vector layer can not be constructed
+        for collection.
         :raises WriteDataError: When vector layer can not be saved to disk.
         """
         self.logger.log(
@@ -261,7 +262,10 @@ class DownloadTask(QgsTask):
             )
             ct.setBallparkTransformsAreAppropriate(True)
             wgs_extent = ct.transformBoundingBox(item.bbox)
-            bounds_str = f"{wgs_extent.xMinimum()},{wgs_extent.yMinimum()},{wgs_extent.xMaximum()},{wgs_extent.yMaximum()}"
+            bounds_str = (
+                f"{wgs_extent.xMinimum()},{wgs_extent.yMinimum()},"
+                f"{wgs_extent.xMaximum()},{wgs_extent.yMaximum()}"
+            )
             writer.set_metadata_value("bounds", bounds_str)
         except QgsCsException:
             pass

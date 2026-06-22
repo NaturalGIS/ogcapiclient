@@ -35,8 +35,10 @@ class MbTilesWriter:
         sql = (
             "BEGIN;"
             "CREATE TABLE metadata (name text, value text);"
-            "CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob);"
-            "CREATE UNIQUE INDEX tile_index on tiles (zoom_level, tile_column, tile_row);"
+            "CREATE TABLE tiles (zoom_level integer, tile_column integer, "
+            "tile_row integer, tile_data blob);"
+            "CREATE UNIQUE INDEX tile_index on tiles (zoom_level, "
+            "tile_column, tile_row);"
             "COMMIT;"
         )
         self.conn.executescript(sql)

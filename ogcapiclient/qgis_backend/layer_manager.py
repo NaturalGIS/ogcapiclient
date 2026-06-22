@@ -11,7 +11,7 @@ from qgis.core import (
 )
 
 from ogcapiclient.core.enums import CollectionType
-from ogcapiclient.core.models import PreparedLayer
+from ogcapiclient.core.models import DownloadedLayer, PreparedLayer
 from ogcapiclient.qgis_backend.utils import create_layer_uri
 
 

@@ -41,9 +41,9 @@ class OgcDiscoveryTask(QgsTask):
         )
         self.url = url
         self.auth_cfg = auth_cfg
-        self.feedback = feedback if feedback else QgisFeedback(self)
-        self.logger = logger if logger else QgisLogger()
-        self.loader = loader if loader else QgisLoader(self.logger, self.feedback)
+        self.feedback = feedback or QgisFeedback(self)
+        self.logger = logger or QgisLogger()
+        self.loader = loader or QgisLoader(self.logger, self.feedback)
         self.data = None
         self.exception = None
 

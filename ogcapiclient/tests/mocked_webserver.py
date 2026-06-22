@@ -4,12 +4,12 @@ Provides a route-based request handler so the same endpoint can be hit multiple 
 without re-registration.
 """
 
+import contextlib
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
-from typing import Optional
 
 
 @dataclass
@@ -123,7 +123,9 @@ class RouteHandler:
         method = method.upper()
         matches = [r for r in self.requests if r.method == method and r.path == path]
         assert matches, (
-            f"Expected at least one {method} {path} request, but recorded requests were: {[(r.method, r.path) for r in self.requests]}"
+            f"Expected at least one {method} {path} request, "
+            "but recorded requests were: "
+            f"{[(r.method, r.path) for r in self.requests]}"
         )
 
     def assert_request_count(self, count: int) -> None:
@@ -133,7 +135,8 @@ class RouteHandler:
         """
         actual = len(self.requests)
         assert actual == count, (
-            f"Expected {count} request(s) but got {actual}: {[(r.method, r.path) for r in self.requests]}"
+            f"Expected {count} request(s) but got {actual}: "
+            f"{[(r.method, r.path) for r in self.requests]}"
         )
 
     def assert_not_requested(self, method: str, path: str) -> None:
@@ -171,7 +174,8 @@ class RouteHandler:
         if reply is None:
             request.send_error(
                 500,
-                f"No route registered for {method} {path}. Registered: {list(self.routes.keys())}",
+                f"No route registered for {method} {path}. "
+                f"Registered: {list(self.routes.keys())}",
             )
             return
 
@@ -184,10 +188,8 @@ class RouteHandler:
         request.send_header("Content-Length", str(len(body)))
         request.end_headers()
         if body:
-            try:
+            with contextlib.suppress(BrokenPipeError, ConnectionResetError):
                 request.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError) as e:
-                pass
 
 
 class _DispatchHandler(BaseHTTPRequestHandler):
