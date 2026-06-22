@@ -26,7 +26,7 @@ class QgisLoader:
         self.logger = logger
         self.feedback = feedback
 
-    def get_json(self, url: str, auth_cfg: str = "") -> dict:
+    def get_json(self, url: str, auth_cfg: str | None = None) -> dict:
         """Performs a blocking HTTP GET for URL and returns the body as a dictionary.
 
         :param url: Fully-qualified URL to request.
@@ -77,7 +77,7 @@ class QgisLoader:
         return self._get(url, auth_cfg)
 
     def _get(
-        self, url: str, auth_cfg: str = "", headers: dict[bytes, bytes] = None
+        self, url: str, auth_cfg: str = "", headers: dict[bytes, bytes] | None = None
     ) -> bytes:
         """Performs a blocking HTTP GET for URL and returns the body as a bytes.
 

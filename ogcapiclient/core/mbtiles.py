@@ -1,3 +1,5 @@
+"""Simple MBTiles writer."""
+
 import os
 import sqlite3
 

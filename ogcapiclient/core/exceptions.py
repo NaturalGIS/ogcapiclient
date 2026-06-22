@@ -10,7 +10,7 @@ class OgcApiClientError(Exception):
     for display in the plugin UI.
     """
 
-    def __init__(self, error_code: ClientError, message: str):
+    def __init__(self, error_code: ClientError, message: str) -> None:
         """Initializes the exception.
 
         :param error_code:  Enum member identifying the category of failure.

@@ -8,7 +8,7 @@ from ogcapiclient.core.enums import LogLevel
 class Loader(Protocol):
     """Fetches remote resources and returns their content as parsed JSON."""
 
-    def get_json(self, url: str, auth_cfg: str | None) -> dict:
+    def get_json(self, url: str, auth_cfg: str = "") -> dict:
         """Fetches a JSON resource from the given URL.
 
         :param url: The full URL to the resource.
@@ -23,7 +23,7 @@ class Loader(Protocol):
         """
         ...
 
-    def get_data(self, url: str, auth_cfg: str | None) -> bytes:
+    def get_data(self, url: str, auth_cfg: str = "") -> bytes:
         """Fetches data from the given URL.
 
         :param url: The full URL to the data.

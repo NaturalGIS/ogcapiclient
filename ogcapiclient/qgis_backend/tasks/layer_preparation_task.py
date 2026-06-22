@@ -1,3 +1,5 @@
+"""Background task for fetching additional details about collection."""
+
 from qgis.core import QgsTask
 
 from ogcapiclient.core.enums import CollectionType
@@ -19,9 +21,9 @@ class LayerPreparationTask(QgsTask):
         collections: list[tuple[Collection, CollectionType]],
         crs_map: dict[str, str],
         auth_cfg: str = "",
-        loader: Loader = None,
-        logger: Logger = None,
-        feedback: Feedback = None,
+        loader: Loader | None = None,
+        logger: Logger | None = None,
+        feedback: Feedback | None = None,
     ) -> None:
         """Initializes the layer preparation task.
 

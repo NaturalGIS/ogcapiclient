@@ -1,3 +1,5 @@
+"""Background task for discovering OGC API server."""
+
 from qgis.core import QgsTask
 
 from ogcapiclient.core.exceptions import OgcApiClientError
@@ -15,9 +17,9 @@ class OgcDiscoveryTask(QgsTask):
         self,
         url: str,
         auth_cfg: str = "",
-        loader: Loader = None,
-        logger: Logger = None,
-        feedback: Feedback = None,
+        loader: Loader | None = None,
+        logger: Logger | None = None,
+        feedback: Feedback | None = None,
     ) -> None:
         """Initializes the discovery task.
 

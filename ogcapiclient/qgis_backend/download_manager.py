@@ -1,3 +1,5 @@
+"""Manager to prepare collections for download."""
+
 import os
 
 from qgis.core import QgsRectangle
@@ -24,6 +26,21 @@ class DownloadManager:
         bbox: QgsRectangle,
         crs_map: dict[str:str],
     ) -> list[OfflineItem]:
+        """Builds a list of objectd describing collections selected for offline use.
+
+        :param items: A list of tuples containing the Collection and type.
+        :type items: list[tuple[Collection, CollectionType]]
+        :param cache_root: A full path to the cache root directory.
+        :type cache_root: str
+        :param server_url:  The base URL (landing page) of the OGC API server.
+        :type server_url: str
+        :param bbox: A bounding box used to filter collection.
+        :type bbox: QgsRectangle
+        :param crs_map: A dictionary that maps collection and its CRS.
+        :type crs_map: dict[str, str]
+        :returns: A list of objects descriting collection.
+        :rtype: list[OfflineItem]
+        """
         download_list: list[OfflineItem] = []
 
         bbox_string = rectangle_to_string(bbox)

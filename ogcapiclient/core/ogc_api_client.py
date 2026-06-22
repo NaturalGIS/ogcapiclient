@@ -1,7 +1,7 @@
 """OGC API client.
 
-Stateless HTTP helper that performs a discovery workflow: landing page → conformance → collections
-and provides a method to retrieve tilesets for a collection.
+Stateless HTTP helper that performs a discovery workflow: landing page - conformance - collections
+and provides methods to retrieve tilesets for a collection and download individual tiles.
 """
 
 from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
@@ -26,7 +26,11 @@ class OgcApiClient:
     """
 
     def __init__(
-        self, loader: Loader, logger: Logger, feedback: Feedback, auth_cfg: str = None
+        self,
+        loader: Loader,
+        logger: Logger,
+        feedback: Feedback,
+        auth_cfg: str | None = None,
     ) -> None:
         """Initializes the client.
 
@@ -37,12 +41,12 @@ class OgcApiClient:
         :param feedback: Progress and cancelation reporter.
         :type feedback: Feedback
         :param auth_cfg: QGIS authentication configuration ID.
-        :type auth_cfg: str
+        :type auth_cfg: str | None
         """
-        self.loader = loader
-        self.logger = logger
-        self.feedback = feedback
-        self.auth_cfg = auth_cfg
+        self.loader: Loader = loader
+        self.logger: Logger = logger
+        self.feedback: Feedback = feedback
+        self.auth_cfg: str = auth_cfg
 
     def connect(self, url: str) -> DiscoveryResult:
         """Initiates the discovery process on an OGC API server.

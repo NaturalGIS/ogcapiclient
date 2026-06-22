@@ -1,3 +1,5 @@
+"""Main plugin class."""
+
 import os
 
 from qgis.core import QgsApplication
@@ -13,6 +15,7 @@ PLUGIN_PATH = os.path.dirname(__file__)
 
 class OgcApiClientPlugin:
     def __init__(self, iface: QgisInterface) -> None:
+        """Initialized the plugin."""
         self.iface = iface
         self.dialog = None
 
@@ -25,6 +28,7 @@ class OgcApiClientPlugin:
             QCoreApplication.installTranslator(self.translator)
 
     def initGui(self) -> None:
+        """Registers plugin within the QGIS UI."""
         self.action_open = QAction(self.tr("OGC API Client"), self.iface.mainWindow())
         self.action_open.setIcon(QIcon(os.path.join(PLUGIN_PATH, "icons", "icon.svg")))
         self.action_open.setObjectName("openOgcApiClient")
@@ -39,18 +43,28 @@ class OgcApiClientPlugin:
         self.iface.addWebToolBarIcon(self.action_open)
 
     def unload(self) -> None:
+        """Unregisters plugin from the QGIS UI."""
         self.iface.removePluginWebMenu(self.tr("OGC API Client"), self.action_open)
         self.iface.removePluginWebMenu(self.tr("OGC API Client"), self.action_help)
         self.iface.removeWebToolBarIcon(self.action_open)
 
     def open_dialog(self) -> None:
+        """Opens plugins main dialog."""
         self.dialog = OgcApiClientDialog(self.iface)
         self.dialog.show()
 
     def open_help(self) -> None:
+        """Opens plugin documentation."""
         QDesktopServices.openUrl(
             QUrl.fromLocalFile(os.path.join(PLUGIN_PATH, "help", "ogcapiclient.pdf"))
         )
 
     def tr(self, text: str) -> str:
+        """Returns translated version of the input string.
+
+        :param text: String to translate.
+        :type text: str
+        :returns: Translated version of the string.
+        :rtype: str
+        """
         return QCoreApplication.translate(self.__class__.__name__, text)

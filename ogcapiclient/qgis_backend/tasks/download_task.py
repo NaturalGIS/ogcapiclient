@@ -1,3 +1,5 @@
+"""Background task for downloading data."""
+
 import math
 import os
 import shutil
@@ -39,16 +41,16 @@ from ogcapiclient.qgis_backend.utils import create_layer_uri
 
 
 class DownloadTask(QgsTask):
-    """Task to download collection and prepare layers."""
+    """Task to download collection for offline use."""
 
     def __init__(
         self,
         landing_page: str,
         collections: list[OfflineDownload],
         auth_cfg: str = "",
-        loader: Loader = None,
-        logger: Logger = None,
-        feedback: Feedback = None,
+        loader: Loader | None = None,
+        logger: Logger | None = None,
+        feedback: Feedback | None = None,
     ) -> None:
         """Initializes the layer downloading task.
 

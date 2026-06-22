@@ -1,4 +1,4 @@
-"""Utilities and helpers."""
+"""Core utilities and helpers."""
 
 import hashlib
 import os
@@ -78,7 +78,7 @@ def parse_links(links: list[dict]) -> list[Link]:
 
 
 def find_link(
-    links: list[Link], rel: str, preferable_types: list[str] = None
+    links: list[Link], rel: str, preferable_types: list[str] | None = None
 ) -> str | None:
     """Finds the href of the best-matching link.
 
@@ -330,9 +330,9 @@ def create_uri_parts(
     collection_id: str,
     landing_page_url: str,
     collection_type: CollectionType,
-    tileset: TileSet = None,
-    crs: str = None,
-    auth_cfg: str = None,
+    tileset: TileSet | None = None,
+    crs: str | None = None,
+    auth_cfg: str | None = None,
 ) -> dict[str, str]:
     """Creates dictionary with parts required to build a connection string for collection.
 
@@ -343,11 +343,11 @@ def create_uri_parts(
     :param collection_type: Type of the collection.
     :type collection_type: CollectionType
     :param tileset: Tile matrix set to use. Only needed for Tiles collections.
-    :type tileset: Tileset
+    :type tileset: Tileset | None
     :param crs: A coordinate reference system used for loading collection..
-    :type crs: str
+    :type crs: str | None
     :param auth_cfg: QGIS authentication configuration ID.
-    :type auth_cfg: str
+    :type auth_cfg: str | None
     :returns: A dictionary with data source URI building blocks.
     :rtype: dict[str, str]
     """

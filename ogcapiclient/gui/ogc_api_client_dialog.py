@@ -1,6 +1,13 @@
+"""OGC API client dialog."""
+
 import os
 
-from qgis.core import QgsApplication, QgsCoordinateReferenceSystem
+from qgis.core import (
+    QgsApplication,
+    QgsCoordinateReferenceSystem,
+    QgsTask,
+    QgsTaskManager,
+)
 from qgis.gui import QgisInterface, QgsFileWidget, QgsGui
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QItemSelectionModel, QModelIndex, Qt, QUrl
@@ -9,7 +16,12 @@ from qgis.PyQt.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
 
 from ogcapiclient.core.constants import TILE_COUNT_THRESHOLD
 from ogcapiclient.core.enums import CollectionType
-from ogcapiclient.core.models import Collection, DownloadedLayer, OfflineDownload
+from ogcapiclient.core.models import (
+    Collection,
+    DiscoveryResult,
+    DownloadedLayer,
+    OfflineDownload,
+)
 from ogcapiclient.gui.constants import (
     MAXIMUM_ABSTRACT_WIDTH,
     MAXIMUM_COLUMN_WIDTH,
@@ -46,11 +58,11 @@ class OgcApiClientDialog(BASE, WIDGET):
         super().__init__(parent)
         self.setupUi(self)
 
-        self.iface = iface
-        self.task_manager = QgsApplication.taskManager()
+        self.iface: QgisInterface = iface
+        self.task_manager: QgsTaskManager = QgsApplication.taskManager()
         self.available_crs: dict[str, list[str]] = {}
-        self.discovery_result = None
-        self.task = None
+        self.discovery_result: DiscoveryResult = None
+        self.task: QgsTask = None
 
         QgsGui.instance().enableAutoGeometryRestore(self)
 
@@ -259,7 +271,7 @@ class OgcApiClientDialog(BASE, WIDGET):
                 QItemSelectionModel.SelectionFlag.SelectCurrent
                 | QItemSelectionModel.SelectionFlag.Rows,
             )
-            # self.collections_tree.setFocus()
+            self.collections_tree.setFocus()
         else:
             self.button_add.setEnabled(False)
             QMessageBox.information(
