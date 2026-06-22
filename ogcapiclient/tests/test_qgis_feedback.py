@@ -66,15 +66,15 @@ class TestQgiskFeedback(unittest.TestCase):
 
         self.assertEqual(task.progress(), 50.0)
 
-    def test_canceled_signal_emitted_when_task_canceled(self):
+    def test_canceled_signal_emitted_when_feedback_canceled(self):
         task = DummyTask()
         feedback = QgisFeedback(task)
         spy = QSignalSpy(feedback.canceled)
 
-        task.cancel()
+        feedback.cancel()
         QCoreApplication.processEvents()
 
-        self.assertEqual(len(spy), 0)
+        self.assertEqual(len(spy), 1)
 
 
 if __name__ == "__main__":

@@ -31,3 +31,9 @@ class QgisFeedback(QgsFeedback):
         :rtype: bool
         """
         return super().isCanceled() or self.task.isCanceled()
+
+    def cancel(self) -> None:
+        """Cancels the current operation."""
+        super().cancel()
+        if self.task and not self.task.isCanceled():
+            self.task.cancel()
