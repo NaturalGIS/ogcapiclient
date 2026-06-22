@@ -100,7 +100,9 @@ class TestMbBTilesWriter(unittest.TestCase):
         writer = MbTilesWriter(self.file_path)
         writer.create()
         writer.close()
+        self.assertIsNone(writer.conn)
         writer.close()
+        self.assertIsNone(writer.conn)
 
     def test_close_without_create_does_not_raise(self):
         writer = MbTilesWriter(self.file_path)
