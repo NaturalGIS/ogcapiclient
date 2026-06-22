@@ -118,3 +118,7 @@ class TestLayerManager(unittest.TestCase):
 
         self.assertFalse(result)
         mock_project.instance.return_value.addMapLayer.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

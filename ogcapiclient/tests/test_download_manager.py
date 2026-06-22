@@ -134,3 +134,7 @@ class TestDownloadManager(unittest.TestCase):
             self.assertEqual(result[1].collection_type, CollectionType.TILES_VECTOR)
             self.assertEqual(result[0].tile_count, 0)
             self.assertGreater(result[1].tile_count, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

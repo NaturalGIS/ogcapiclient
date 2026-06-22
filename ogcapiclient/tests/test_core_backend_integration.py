@@ -60,3 +60,7 @@ class TestCreateLayerUriIntegration(unittest.TestCase):
                 self.assertTrue(uri)
                 for i in expected:
                     self.assertIn(i, uri)
+
+
+if __name__ == "__main__":
+    unittest.main()
