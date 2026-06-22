@@ -118,7 +118,8 @@ class DownloadTask(QgsTask):
             return True
         except Exception as e:
             self.logger.log(
-                self.tr("Failed download data: {error}").format(error=str(e))
+                self.tr("Failed download data: {error}").format(error=str(e)),
+                LogLevel.CRITICAL,
             )
             self.exception = e
             return False
@@ -161,7 +162,8 @@ class DownloadTask(QgsTask):
         layer = QgsVectorLayer(uri, item.collection.id, "oapif")
         if not layer.isValid():
             self.logger.log(
-                self.tr("An invalid layer created from URI '{uri}'.").format(uri=uri)
+                self.tr("An invalid layer created from URI '{uri}'.").format(uri=uri),
+                LogLevel.CRITICAL,
             )
             raise InvalidLayerError(f"An invalid layer created from URI '{uri}'.")
 
@@ -186,7 +188,10 @@ class DownloadTask(QgsTask):
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
             self.logger.log(
-                self.tr("Failed to save data: {message}.").format(message=error_message)
+                self.tr("Failed to save data: {message}.").format(
+                    message=error_message
+                ),
+                LogLevel.CRITICAL,
             )
             raise WriteDataError(f"Failed to save data: {error_message}.")
 
@@ -237,7 +242,9 @@ class DownloadTask(QgsTask):
         if not writer.create():
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
-            self.logger.log(self.tr("Failed to create MBTiles file."))
+            self.logger.log(
+                self.tr("Failed to create MBTiles file."), LogLevel.CRITICAL
+            )
             raise MbTilesError(f"Failed to create MBTiles file {temp_file_path}")
 
         writer.set_metadata_value("name", item.collection.id)

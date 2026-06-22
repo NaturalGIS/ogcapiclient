@@ -186,7 +186,7 @@ class TestQgisLoader(unittest.TestCase):
 
         self.assertTrue(len(mock_logger.messages) > 0)
         log_level, log_msg = mock_logger.messages[0]
-        self.assertEqual(log_level, LogLevel.INFO)
+        self.assertEqual(log_level, LogLevel.CRITICAL)
         self.assertIn("HTTP request failed", log_msg)
 
 

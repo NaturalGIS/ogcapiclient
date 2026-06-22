@@ -72,7 +72,9 @@ class OgcApiClient:
 
         landing_page = self.get_landing_page(url)
         if not landing_page:
-            self.logger.log("Empty body returned for landing page request.")
+            self.logger.log(
+                "Empty body returned for landing page request.", LogLevel.CRITICAL
+            )
             raise OgcApiClientError(
                 ClientError.EMPTY_RESPONSE,
                 "Empty body returned for landing page request.",
@@ -90,7 +92,9 @@ class OgcApiClient:
             links, "http://www.opengis.net/def/rel/ogc/1.0/data", ["application/json"]
         )
         if not collections_url:
-            self.logger.log("No collections link found on landing page.")
+            self.logger.log(
+                "No collections link found on landing page.", LogLevel.CRITICAL
+            )
             raise OgcApiClientError(
                 ClientError.PARSE_ERROR, "No collections link found on landing page."
             )
@@ -119,7 +123,9 @@ class OgcApiClient:
 
         collections = self.get_collections(collections_url)
         if not collections:
-            self.logger.log("Empty body returned for collections page request.")
+            self.logger.log(
+                "Empty body returned for collections page request.", LogLevel.CRITICAL
+            )
             raise OgcApiClientError(
                 ClientError.EMPTY_RESPONSE,
                 "Empty body returned for collections page request.",

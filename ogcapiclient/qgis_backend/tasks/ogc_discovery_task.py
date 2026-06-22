@@ -61,7 +61,8 @@ class OgcDiscoveryTask(QgsTask):
             self.logger.log(
                 self.tr(
                     "Failed to perform discovery of the OGC API server {url}: {error}."
-                ).format(url=self.url, error=str(e))
+                ).format(url=self.url, error=str(e)),
+                LogLevel.CRITICAL,
             )
             self.exception = e
             return False

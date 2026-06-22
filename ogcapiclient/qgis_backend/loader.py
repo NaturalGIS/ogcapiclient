@@ -45,7 +45,10 @@ class QgisLoader:
             decoded = data.decode("utf-8")
         except UnicodeDecodeError as e:
             self._log(
-                self.tr("Failed to decode reply as UTF-8: {error}").format(error=str(e))
+                self.tr("Failed to decode reply as UTF-8: {error}").format(
+                    error=str(e)
+                ),
+                LogLevel.CRITICAL,
             )
             raise OgcApiClientError(
                 ClientError.DECODE_ERROR, self.tr("Failed to decode reply as UTF-8")
@@ -58,7 +61,8 @@ class QgisLoader:
             self._log(
                 self.tr("Failed to parse JSON: {error}\nSnippet: {snippet}").format(
                     error=str(e), snippet=snippet
-                )
+                ),
+                LogLevel.CRITICAL,
             )
             raise OgcApiClientError(
                 ClientError.PARSE_ERROR, self.tr("Failed to parse JSON.")
@@ -146,7 +150,8 @@ class QgisLoader:
                         url=url,
                         code=display_code,
                         message=blocking_request.errorMessage(),
-                    )
+                    ),
+                    LogLevel.CRITICAL,
                 )
                 raise OgcApiClientError(
                     error_type,
@@ -159,7 +164,8 @@ class QgisLoader:
                         "Server returned error {code} for {url}.\n{message}"
                     ).format(
                         code=http_code, url=url, message=blocking_request.errorMessage()
-                    )
+                    ),
+                    LogLevel.CRITICAL,
                 )
                 raise OgcApiClientError(
                     ClientError.SERVER_ERROR,
@@ -170,6 +176,9 @@ class QgisLoader:
 
             data = reply.content().data()
             if not data:
+                self._log(
+                    self.tr("Server returned an empty response."), LogLevel.CRITICAL
+                )
                 raise OgcApiClientError(
                     ClientError.EMPTY_RESPONSE,
                     self.tr("Server returned an empty response."),

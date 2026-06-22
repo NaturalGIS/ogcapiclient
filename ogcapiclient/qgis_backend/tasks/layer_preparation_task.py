@@ -73,7 +73,8 @@ class LayerPreparationTask(QgsTask):
             self.logger.log(
                 self.tr("Failed to prepare online layer(s): {error}.").format(
                     error=str(e)
-                )
+                ),
+                LogLevel.CRITICAL,
             )
             self.exception = e
             return False
