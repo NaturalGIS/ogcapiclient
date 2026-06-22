@@ -1218,6 +1218,40 @@ class TestCachePath(unittest.TestCase):
         p2 = cache_path("/c", bbox="0.000000,0.000000,2.000000,2.000000", **kwargs)
         self.assertNotEqual(p1, p2)
 
+    def test_different_crss_produce_different_paths(self):
+        kwargs = {
+            "server_url": "http://example.com",
+            "collection_id": "col",
+            "bbox": "0,0,1,1",
+            "collection_type": CollectionType.FEATURES,
+        }
+        p1 = cache_path("/c", crs="EPSG1234", **kwargs)
+        p2 = cache_path("/c", crs="EPSG1123", **kwargs)
+        self.assertNotEqual(p1, p2)
+
+    def test_different_ids_produce_different_paths(self):
+        kwargs = {
+            "server_url": "http://example.com",
+            "crs": "EPSG4326",
+            "bbox": "0,0,1,1",
+            "collection_type": CollectionType.FEATURES,
+        }
+        p1 = cache_path("/c", collection_id="col1", **kwargs)
+        p2 = cache_path("/c", collection_id="col2", **kwargs)
+        self.assertNotEqual(p1, p2)
+
+    def test_same_inputs_produce_same_path(self):
+        kwargs = {
+            "server_url": "http://example.com",
+            "collection_id": "col1",
+            "crs": "EPSG4326",
+            "bbox": "0,0,1,1",
+            "collection_type": CollectionType.FEATURES,
+        }
+        p1 = cache_path("/c", **kwargs)
+        p2 = cache_path("/c", **kwargs)
+        self.assertEqual(p1, p2)
+
 
 class TestFormatTileUrl(unittest.TestCase):
     def test_basic_substitution(self):
