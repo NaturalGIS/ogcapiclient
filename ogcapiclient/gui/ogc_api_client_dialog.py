@@ -290,6 +290,9 @@ class OgcApiClientDialog(BASE, WIDGET):
         if not current_index.isValid():
             return
 
+        if self.task is not None:
+            return
+
         if self.button_online.isChecked():
             self.online_mode()
         else:
