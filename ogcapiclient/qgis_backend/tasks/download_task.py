@@ -262,16 +262,9 @@ class DownloadTask(QgsTask):
 
         try:
             writer.set_metadata_value("crs", "EPSG:3857")
-            ct = QgsCoordinateTransform(
-                QgsCoordinateReferenceSystem("EPSG:3857"),
-                QgsCoordinateReferenceSystem("EPSG:4326"),
-                QgsCoordinateTransformContext(),
-            )
-            ct.setBallparkTransformsAreAppropriate(True)
-            wgs_extent = ct.transformBoundingBox(item.bbox)
             bounds_str = (
-                f"{wgs_extent.xMinimum()},{wgs_extent.yMinimum()},"
-                f"{wgs_extent.xMaximum()},{wgs_extent.yMaximum()}"
+                f"{item.bbox.xMinimum()},{item.bbox.yMinimum()},"
+                f"{item.bbox.xMaximum()},{item.bbox.yMaximum()}"
             )
             writer.set_metadata_value("bounds", bounds_str)
         except QgsCsException:
