@@ -412,16 +412,7 @@ class OgcApiClientDialog(BASE, WIDGET):
                 if answer == QMessageBox.StandardButton.No:
                     continue
 
-            download_list.append(
-                OfflineDownload(
-                    item.collection,
-                    item.collection_type,
-                    item.file_path,
-                    item.bbox,
-                    item.crs,
-                    item.tile_ranges,
-                )
-            )
+            download_list.append(item)
 
         for i in local_list:
             LayerManager.add_offline_layer(i)

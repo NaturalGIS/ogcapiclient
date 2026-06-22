@@ -302,6 +302,7 @@ class DownloadTask(QgsTask):
                         ),
                         LogLevel.WARNING,
                     )
+                    continue
                 row_tms = math.pow(2, tile.zoomLevel()) - tile.row() - 1
                 if item.collection_type == CollectionType.TILES_VECTOR:
                     compression_object = zlib.compressobj(
@@ -317,9 +318,7 @@ class DownloadTask(QgsTask):
                         tile.zoomLevel(), tile.column(), row_tms, gzip_data
                     )
                 elif item.collection_type == CollectionType.TILES_RASTER:
-                    writer.set_tile_data(
-                        tile.zoomLevel(), tile.column(), row_tms, data.data()
-                    )
+                    writer.set_tile_data(tile.zoomLevel(), tile.column(), row_tms, data)
 
         writer.close()
         shutil.move(temp_file_path, item.file_path)

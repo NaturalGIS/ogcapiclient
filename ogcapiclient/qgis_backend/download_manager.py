@@ -6,7 +6,7 @@ from qgis.core import QgsRectangle
 
 from ogcapiclient.core.constants import MAX_ZOOM_TILES_RASTER, MAX_ZOOM_TILES_VECTOR
 from ogcapiclient.core.enums import CollectionType
-from ogcapiclient.core.models import Collection, OfflineItem
+from ogcapiclient.core.models import Collection, OfflineDownload
 from ogcapiclient.core.utils import cache_path
 from ogcapiclient.qgis_backend.utils import (
     collect_tiles,
@@ -25,7 +25,7 @@ class DownloadManager:
         server_url: str,
         bbox: QgsRectangle,
         crs_map: dict[str:str],
-    ) -> list[OfflineItem]:
+    ) -> list[OfflineDownload]:
         """Builds a list of objectd describing collections selected for offline use.
 
         :param items: A list of tuples containing the Collection and type.
@@ -41,7 +41,7 @@ class DownloadManager:
         :returns: A list of objects descriting collection.
         :rtype: list[OfflineItem]
         """
-        download_list: list[OfflineItem] = []
+        download_list: list[OfflineDownload] = []
 
         bbox_string = rectangle_to_string(bbox)
         for collection, collection_type in items:
@@ -72,7 +72,7 @@ class DownloadManager:
                 tile_count, tile_ranges = collect_tiles(bbox, max_zoom)
 
             download_list.append(
-                OfflineItem(
+                OfflineDownload(
                     collection,
                     collection_type,
                     file_path,

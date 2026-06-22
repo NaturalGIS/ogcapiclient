@@ -122,7 +122,7 @@ class PreparedLayer:
 
 
 @dataclass
-class OfflineItem:
+class OfflineDownload:
     """Defines a collection prepared for offline use."""
 
     collection: Collection
@@ -144,24 +144,6 @@ class OfflineItem:
 
 
 @dataclass
-class OfflineDownload:
-    """Defines a collection for offline download."""
-
-    collection: Collection
-    """The collection to download."""
-    collection_type: CollectionType
-    """Type of the collection."""
-    file_path: str
-    """Full path to the file where the downloaded data should be saved."""
-    bbox: object | None = None
-    """Bounding box for spatial filtering."""
-    crs: str | None = None
-    """Coordinate reference system to use for Features collection."""
-    tile_ranges: dict[int, object] | None = None
-    """Tile ranges to download for Features collections."""
-
-
-@dataclass
 class DownloadedLayer:
     """All data needed to add downloaded layer to the QGIS project."""
 
@@ -178,7 +160,7 @@ class DownloadedLayer:
         if self.collection_type == CollectionType.FEATURES:
             return "ogr"
         if self.collection_type == CollectionType.TILES_RASTER:
-            return "wms"
+            return "gdal"
         if self.collection_type == CollectionType.TILES_VECTOR:
             return "xyzvectortiles"
         return ""
