@@ -35,7 +35,7 @@ class OgcApiClientDialog(BASE, WIDGET):
     Provides the interface for server connection, AOI selection, and collection browsing.
     """
 
-    def __init__(self, iface: QgisInterface, parent: QWidget = None) -> Mone:
+    def __init__(self, iface: QgisInterface, parent: QWidget = None) -> None:
         """Initialises the dialog.
 
         :param iface: The QGIS interface instance.
