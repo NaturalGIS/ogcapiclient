@@ -4,43 +4,12 @@ from ogcapiclient.core.constants import TMS_WEB_MERCATOR_QUAD
 from ogcapiclient.core.enums import ClientError, CollectionType, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.core.ogc_api_client import OgcApiClient
+from ogcapiclient.tests.mocks import MockLoader, MockLogger
 from ogcapiclient.tests.utils import (
     create_collection,
-    create_tileset_data,
     load_from_file,
+    raw_tileset,
 )
-
-
-class MockLoader:
-    """Mocks the HTTP backend, returning predefined JSON or raising exceptions."""
-
-    def __init__(self, responses: dict[str, dict | Exception] = None):
-        self.responses = responses or {}
-        self.calls = []
-
-    def get_json(self, url: str, auth_cfg: str | None) -> dict:
-        self.calls.append((url, auth_cfg))
-
-        if url not in self.responses:
-            raise OgcApiClientError(
-                ClientError.NETWORK_ERROR, f"Mocked 404: {url} not found."
-            )
-
-        response = self.responses[url]
-        if isinstance(response, Exception):
-            raise response
-
-        return response
-
-
-class MockLogger:
-    """Mocks the logger and stores messages for assertion."""
-
-    def __init__(self):
-        self.messages: list[tuple[LogLevel, str]] = []
-
-    def log(self, message: str, level: LogLevel = LogLevel.INFO) -> None:
-        self.messages.append((level, message))
 
 
 class MockFeedback:
@@ -319,7 +288,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_vector_tiles_layer_fetches_tilesets_from_server(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         collection = create_collection(
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
@@ -333,7 +302,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_vector_tiles_layer_prepared_with_correct_name(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         collection = create_collection(
             "nuts1", "NUTS 1", CollectionType.TILES_VECTOR, tiles_url
         )
@@ -346,7 +315,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_vector_tiles_layer_tilesets_are_populated(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         collection = create_collection(
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
@@ -359,7 +328,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_vector_tiles_prefers_web_mercator_quad(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         collection = create_collection(
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
@@ -372,7 +341,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_vector_tiles_without_web_mercator_tileset_skipped(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data("ETRS89-TM35FIN")
+        self.loader.responses[tiles_url] = raw_tileset("ETRS89-TM35FIN")
         collection = create_collection(
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
@@ -434,7 +403,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_multiple_collections_all_prepared(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         features_collection = create_collection(
             "municipios", "Municípios", CollectionType.FEATURES
         )
@@ -455,7 +424,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_progress_reported_during_prepare_layers(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         collection = create_collection(
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url
         )
@@ -468,7 +437,7 @@ class TestOgcApiClient(unittest.TestCase):
 
     def test_cancellation_during_prepare_layers_raises_error(self):
         tiles_url = f"{self.base_url}/collections/nuts1/tiles?f=json"
-        self.loader.responses[tiles_url] = create_tileset_data()
+        self.loader.responses[tiles_url] = raw_tileset()
         self.feedback._is_canceled = True
         collection = create_collection(
             collection_type=CollectionType.TILES_VECTOR, capabilities_url=tiles_url

@@ -13,15 +13,12 @@ from qgis.core import (
 from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.models import DownloadedLayer, PreparedLayer
 from ogcapiclient.qgis_backend.layer_manager import LayerManager
+from ogcapiclient.tests.utils import create_downloaded_layer, create_prepared_layer
 
 
 class TestLayerManager(unittest.TestCase):
     def test_create_online_features_layer(self):
-        prepared = PreparedLayer(
-            name="features",
-            collection_type=CollectionType.FEATURES,
-            uri_parts={},
-        )
+        prepared = create_prepared_layer("features", CollectionType.FEATURES)
 
         layer = LayerManager.create_online_layer(prepared, "dummy")
 
@@ -30,11 +27,7 @@ class TestLayerManager(unittest.TestCase):
         self.assertEqual(layer.providerType(), "oapif")
 
     def test_create_online_raster_layer(self):
-        prepared = PreparedLayer(
-            name="raster",
-            collection_type=CollectionType.TILES_RASTER,
-            uri_parts={},
-        )
+        prepared = create_prepared_layer("raster", CollectionType.TILES_RASTER)
 
         layer = LayerManager.create_online_layer(prepared, "dummy")
 
@@ -43,11 +36,7 @@ class TestLayerManager(unittest.TestCase):
         self.assertEqual(layer.providerType(), "wms")
 
     def test_create_online_vector_tiles_layer(self):
-        prepared = PreparedLayer(
-            name="pbf",
-            collection_type=CollectionType.TILES_VECTOR,
-            uri_parts={},
-        )
+        prepared = create_prepared_layer("pbf", CollectionType.TILES_VECTOR)
 
         layer = LayerManager.create_online_layer(prepared, "dummy")
 
@@ -61,10 +50,8 @@ class TestLayerManager(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as f:
                 f.write('{"type":"FeatureCollection","features":[]}')
 
-            downloaded = DownloadedLayer(
-                name="features",
-                collection_type=CollectionType.FEATURES,
-                file_path=path,
+            downloaded = create_downloaded_layer(
+                "features", CollectionType.FEATURES, path
             )
 
             layer = LayerManager.create_offline_layer(downloaded)
@@ -75,10 +62,8 @@ class TestLayerManager(unittest.TestCase):
             self.assertTrue(layer.isValid())
 
     def test_create_offline_raster_layer(self):
-        downloaded = DownloadedLayer(
-            name="raster",
-            collection_type=CollectionType.TILES_RASTER,
-            file_path="/does/not/exist.tif",
+        downloaded = create_downloaded_layer(
+            "raster", CollectionType.TILES_RASTER, "/does/not/exist.tif"
         )
 
         layer = LayerManager.create_offline_layer(downloaded)
@@ -88,10 +73,8 @@ class TestLayerManager(unittest.TestCase):
         self.assertEqual(layer.providerType(), "gdal")
 
     def test_create_offline_vector_tiles_layer(self):
-        downloaded = DownloadedLayer(
-            name="pbf",
-            collection_type=CollectionType.TILES_VECTOR,
-            file_path="/tmp/test.mbtiles",
+        downloaded = create_downloaded_layer(
+            "pbf", CollectionType.TILES_VECTOR, "/tmp/test.mbtiles"
         )
 
         layer = LayerManager.create_offline_layer(downloaded)

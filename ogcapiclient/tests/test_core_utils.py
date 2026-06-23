@@ -16,7 +16,7 @@ from ogcapiclient.core.utils import (
     parse_tilesets,
     sanitize_string,
 )
-from ogcapiclient.tests.utils import create_tileset_data, load_from_file
+from ogcapiclient.tests.utils import create_tileset, load_from_file, raw_tileset
 
 
 class TestParseLinks(unittest.TestCase):
@@ -689,7 +689,7 @@ class TestParseTilesets(unittest.TestCase):
         self.assertEqual(parse_tilesets(data), [])
 
     def test_tms_id_extracted_from_url(self):
-        data = create_tileset_data(
+        data = raw_tileset(
             TMS_WEB_MERCATOR_QUAD,
             "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
         )
@@ -698,7 +698,7 @@ class TestParseTilesets(unittest.TestCase):
         self.assertEqual(result[0].tms_id, TMS_WEB_MERCATOR_QUAD)
 
     def test_tms_id_extracted_from_urn(self):
-        data = create_tileset_data(
+        data = raw_tileset(
             TMS_WEB_MERCATOR_QUAD,
             "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}",
             True,
@@ -771,7 +771,7 @@ class TestParseTilesets(unittest.TestCase):
         template = (
             "https://example.com/WebMercatorQuad/{tileMatrix}/{tileRow}/{tileCol}"
         )
-        data = create_tileset_data(TMS_WEB_MERCATOR_QUAD, template)
+        data = raw_tileset(TMS_WEB_MERCATOR_QUAD, template)
         result = parse_tilesets(data)
         self.assertEqual(
             result[0].url_template, "https://example.com/WebMercatorQuad/{z}/{y}/{x}"
@@ -781,7 +781,7 @@ class TestParseTilesets(unittest.TestCase):
         template = (
             "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
         )
-        data = create_tileset_data(TMS_WEB_MERCATOR_QUAD, template)
+        data = raw_tileset(TMS_WEB_MERCATOR_QUAD, template)
         result = parse_tilesets(data)
         url = result[0].url_template
         self.assertNotIn("{tileMatrixSetId}", url)
@@ -791,7 +791,7 @@ class TestParseTilesets(unittest.TestCase):
         template = (
             "https://example.com/{tileMatrixSetId}/{tileMatrix}/{tileRow}/{tileCol}"
         )
-        data = create_tileset_data("ETRS89-TM35FIN", template)
+        data = raw_tileset("ETRS89-TM35FIN", template)
         result = parse_tilesets(data)
         self.assertEqual(result, [])
 
@@ -898,10 +898,6 @@ class TestCreateUriParts(unittest.TestCase):
     COLLECTION_ID = "testCollection"
     TILE_URL = "https://example.com/tiles/{z}/{y}/{x}"
 
-    def _create_tileset(self, url: str = TILE_URL) -> TileSet:
-        """Creates a TileSet object."""
-        return TileSet(tms_id=TMS_WEB_MERCATOR_QUAD, url_template=url)
-
     def test_features_uri_contains_url_and_typename(self):
         parts = create_uri_parts(
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.FEATURES
@@ -925,21 +921,21 @@ class TestCreateUriParts(unittest.TestCase):
         self.assertEqual(parts["authcfg"], "authId")
 
     def test_raster_tiles_uri_contains_template_url(self):
-        ts = self._create_tileset()
+        ts = create_tileset()
         parts = create_uri_parts(
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_RASTER, ts
         )
         self.assertEqual(parts["url"], self.TILE_URL)
 
     def test_raster_tiles_uri_type_is_xyz(self):
-        ts = self._create_tileset()
+        ts = create_tileset()
         parts = create_uri_parts(
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_RASTER, ts
         )
         self.assertEqual(parts["type"], "xyz")
 
     def test_raster_tiles_uri_includes_authcfg_when_provided(self):
-        ts = self._create_tileset()
+        ts = create_tileset()
         parts = create_uri_parts(
             self.COLLECTION_ID,
             self.LANDING_PAGE,
@@ -950,21 +946,21 @@ class TestCreateUriParts(unittest.TestCase):
         self.assertEqual(parts["authcfg"], "authId")
 
     def test_vector_tiles_uri_contains_template_url(self):
-        ts = self._create_tileset()
+        ts = create_tileset()
         parts = create_uri_parts(
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_VECTOR, ts
         )
         self.assertEqual(parts["url"], self.TILE_URL)
 
     def test_vector_tiles_uri_type_is_xyz(self):
-        ts = self._create_tileset()
+        ts = create_tileset()
         parts = create_uri_parts(
             self.COLLECTION_ID, self.LANDING_PAGE, CollectionType.TILES_VECTOR, ts
         )
         self.assertEqual(parts["type"], "xyz")
 
     def test_vector_tiles_uri_includes_authcfg_when_provided(self):
-        ts = self._create_tileset()
+        ts = create_tileset()
         parts = create_uri_parts(
             self.COLLECTION_ID,
             self.LANDING_PAGE,
@@ -983,7 +979,7 @@ class TestCreateUriParts(unittest.TestCase):
     def test_authcfg_not_present_when_not_supplied(self):
         for ct in (CollectionType.FEATURES, CollectionType.TILES_VECTOR):
             with self.subTest(collection_type=ct):
-                ts = self._create_tileset()
+                ts = create_tileset()
                 parts = create_uri_parts(
                     self.COLLECTION_ID, self.LANDING_PAGE, ct, tileset=ts
                 )

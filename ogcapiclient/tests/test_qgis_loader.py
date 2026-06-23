@@ -9,6 +9,7 @@ from ogcapiclient.core.enums import ClientError, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.qgis_backend.loader import QgisLoader
 from ogcapiclient.tests.mocked_webserver import MockedWebServer
+from ogcapiclient.tests.mocks import MockLogger
 
 TEST_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -21,16 +22,6 @@ class MockFeedback(QgsFeedback):
 
     def set_progress(self, progress: float) -> None:
         pass
-
-
-class MockLogger:
-    """Mocks the logger and stores messages for assertion."""
-
-    def __init__(self):
-        self.messages: list[tuple[LogLevel, str]] = []
-
-    def log(self, message: str, level: LogLevel = LogLevel.INFO) -> None:
-        self.messages.append((level, message))
 
 
 class TestQgisLoader(unittest.TestCase):

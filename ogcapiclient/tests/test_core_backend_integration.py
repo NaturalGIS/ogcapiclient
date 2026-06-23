@@ -5,15 +5,10 @@ from ogcapiclient.core.enums import CollectionType
 from ogcapiclient.core.models import PreparedLayer, TileSet
 from ogcapiclient.core.utils import create_uri_parts
 from ogcapiclient.qgis_backend.utils import create_layer_uri
+from ogcapiclient.tests.utils import create_tileset
 
 
 class TestCreateLayerUriIntegration(unittest.TestCase):
-    def _create_tileset(self):
-        return TileSet(
-            tms_id=TMS_WEB_MERCATOR_QUAD,
-            url_template="https://example.com/tiles/{z}/{y}/{x}",
-        )
-
     def test_create_uri_parts_and_create_layer_uri(self):
         cases = [
             (
@@ -23,7 +18,7 @@ class TestCreateLayerUriIntegration(unittest.TestCase):
             ),
             (
                 CollectionType.TILES_RASTER,
-                {"tileset": self._create_tileset()},
+                {"tileset": create_tileset()},
                 [
                     "type=xyz",
                     "https%3A%2F%2Fexample.com%2Ftiles%2F%7Bz%7D%2F%7By%7D%2F%7Bx%7D",
@@ -31,7 +26,7 @@ class TestCreateLayerUriIntegration(unittest.TestCase):
             ),
             (
                 CollectionType.TILES_VECTOR,
-                {"tileset": self._create_tileset()},
+                {"tileset": create_tileset()},
                 [
                     "type=xyz",
                     "https%3A%2F%2Fexample.com%2Ftiles%2F%7Bz%7D%2F%7By%7D%2F%7Bx%7D",

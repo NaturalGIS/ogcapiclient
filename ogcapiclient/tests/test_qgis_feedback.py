@@ -1,26 +1,10 @@
 import unittest
 
-from qgis.core import QgsTask
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtTest import QSignalSpy
 
 from ogcapiclient.qgis_backend.feedback import QgisFeedback
-
-
-class DummyTask(QgsTask):
-    def __init__(self):
-        super().__init__(
-            "Dummy task", QgsTask.Flag.CanCancel | QgsTask.Flag.CancelWithoutPrompt
-        )
-        self.feedback: QgisFeedback | None = None
-        self.started = False
-
-    def run(self) -> bool:
-        self.started = True
-        return True
-
-    def finished(self, result: bool) -> None:
-        pass
+from ogcapiclient.tests.mocks import DummyTask
 
 
 class TestQgisFeedback(unittest.TestCase):
