@@ -350,10 +350,7 @@ class OgcApiClientDialog(BASE, WIDGET):
         prepared_layers = task.data
         self.layer_preparation_finished()
         for layer in prepared_layers:
-            ok = LayerManager.add_online_layer(layer, bbox)
-            if not ok:
-                # TODO: log failure?
-                pass
+            _ = LayerManager.add_online_layer(layer, bbox)
 
     def offline_mode(self):
         """Prepares selected collections for addition to the project in offline mode."""
@@ -464,10 +461,7 @@ class OgcApiClientDialog(BASE, WIDGET):
         downloaded_layers = task.data
         self.download_finished()
         for layer in downloaded_layers:
-            ok = LayerManager.add_offline_layer(layer)
-            if not ok:
-                # TODO: log failure?
-                pass
+            _ = LayerManager.add_offline_layer(layer)
 
     def _selected_items(
         self,
