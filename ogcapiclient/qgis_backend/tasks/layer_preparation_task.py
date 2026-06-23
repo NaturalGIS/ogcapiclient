@@ -2,10 +2,10 @@
 
 from qgis.core import QgsTask
 
-from ogcapiclient.core.enums import CollectionType
+from ogcapiclient.core.enums import CollectionType, LogLevel
 from ogcapiclient.core.exceptions import OgcApiClientError
 from ogcapiclient.core.interfaces import Feedback, Loader, Logger
-from ogcapiclient.core.models import Collection
+from ogcapiclient.core.models import Collection, PreparedLayer
 from ogcapiclient.core.ogc_api_client import OgcApiClient
 from ogcapiclient.qgis_backend.feedback import QgisFeedback
 from ogcapiclient.qgis_backend.loader import QgisLoader
@@ -54,8 +54,8 @@ class LayerPreparationTask(QgsTask):
         self.feedback = feedback or QgisFeedback(self)
         self.logger = logger or QgisLogger()
         self.loader = loader or QgisLoader(self.logger, self.feedback)
-        self.data = None
-        self.exception = None
+        self.data: list[PreparedLayer] | None = None
+        self.exception: Exception | None = None
 
     def run(self) -> bool:
         """Executes the layer preparation.

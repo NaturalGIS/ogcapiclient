@@ -78,8 +78,8 @@ class DownloadTask(QgsTask):
         self.feedback = feedback or QgisFeedback(self)
         self.logger = logger or QgisLogger()
         self.loader = loader or QgisLoader(self.logger, self.feedback)
-        self.data = None
-        self.exception = None
+        self.data: list[DownloadedLayer] | None = None
+        self.exception: Exception | None = None
 
     def run(self) -> bool:
         """Executes the layer downloading.

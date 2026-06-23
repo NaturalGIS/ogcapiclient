@@ -1,5 +1,6 @@
 """OGC API client dialog."""
 
+import contextlib
 import os
 
 from qgis.core import (
@@ -200,7 +201,8 @@ class OgcApiClientDialog(BASE, WIDGET):
             self.progress_bar.setValue(-1)
             self.progress_bar.hide()
             self.button_cancel.hide()
-            self.button_cancel.clicked.disconnect(self.task.cancel)
+            with contextlib.suppress(TypeError, RuntimeError):
+                self.button_cancel.clicked.disconnect(self.task.cancel)
             self.task = None
 
     def update_collections(self) -> None:

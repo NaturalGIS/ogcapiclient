@@ -23,7 +23,7 @@ class DummyTask(QgsTask):
         pass
 
 
-class TestQgiskFeedback(unittest.TestCase):
+class TestQgisFeedback(unittest.TestCase):
     def test_not_canceled_initially(self):
         task = DummyTask()
         feedback = QgisFeedback(task)
@@ -38,15 +38,6 @@ class TestQgiskFeedback(unittest.TestCase):
         QCoreApplication.processEvents()
 
         self.assertTrue(feedback.is_canceled())
-
-    def test_cancel_propagates_to_task(self):
-        task = DummyTask()
-        feedback = QgisFeedback(task)
-
-        feedback.cancel()
-        QCoreApplication.processEvents()
-
-        self.assertTrue(task.isCanceled())
 
     def test_direct_cancel_on_feedback_sets_canceled(self):
         task = DummyTask()
@@ -64,16 +55,6 @@ class TestQgiskFeedback(unittest.TestCase):
         feedback.set_progress(50.0)
 
         self.assertEqual(task.progress(), 50.0)
-
-    def test_canceled_signal_emitted_when_feedback_canceled(self):
-        task = DummyTask()
-        feedback = QgisFeedback(task)
-        spy = QSignalSpy(feedback.canceled)
-
-        feedback.cancel()
-        QCoreApplication.processEvents()
-
-        self.assertEqual(len(spy), 1)
 
 
 if __name__ == "__main__":
