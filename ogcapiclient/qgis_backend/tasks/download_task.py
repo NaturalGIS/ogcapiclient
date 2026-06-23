@@ -11,6 +11,7 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsCoordinateTransformContext,
     QgsCsException,
+    QgsFeedback,
     QgsTask,
     QgsTileMatrixSet,
     QgsVectorFileWriter,
@@ -80,6 +81,7 @@ class DownloadTask(QgsTask):
         self.loader = loader or QgisLoader(self.logger, self.feedback)
         self.data: list[DownloadedLayer] | None = None
         self.exception: Exception | None = None
+        self.progress_weight: float = 0
 
     def run(self) -> bool:
         """Executes the layer downloading.
@@ -93,26 +95,29 @@ class DownloadTask(QgsTask):
 
         downloaded_layers = []
 
+        total_items = len(self.collections)
+        self.progress_weight = 100.0 / total_items if total_items > 0 else 0
+
         try:
-            for i in self.collections:
+            for i, item in enumerate(self.collections):
                 if self.feedback.is_canceled():
                     break
 
+                base_progress = i * self.progress_weight
+
                 layer = None
-                if i.collection_type == CollectionType.FEATURES:
-                    layer = self.download_features(i)
-                elif i.collection_type in (
+                if item.collection_type == CollectionType.FEATURES:
+                    layer = self.download_features(item, base_progress)
+                elif item.collection_type in (
                     CollectionType.TILES_RASTER,
                     CollectionType.TILES_VECTOR,
                 ):
-                    layer = self.download_tiles(i)
+                    layer = self.download_tiles(item, base_progress)
                 else:
                     continue
 
                 if layer:
                     downloaded_layers.append(layer)
-
-                # TODO: report progress?
 
             self.data = downloaded_layers
             return True
@@ -130,11 +135,15 @@ class DownloadTask(QgsTask):
             self.feedback.cancel()
         super().cancel()
 
-    def download_features(self, item: OfflineDownload) -> DownloadedLayer:
+    def download_features(
+        self, item: OfflineDownload, base_progress: float
+    ) -> DownloadedLayer:
         """Downloads Features collection.
 
         :param item: Object describing collection to download.
         :type item: OfflineDownload
+        :param base_progress: Base progress value for this item
+        :type base_progress: float
         :returns: Structured object describing oflline layer.
         :rtype: DownloadedLayer
         :raises InvalidLayerError: When vector layer can not be constructed
@@ -172,21 +181,39 @@ class DownloadTask(QgsTask):
         temp_file_path = temp_file.name
         temp_file.close()
 
+        writer_feedback = QgsFeedback()
+        self.feedback.canceled.connect(writer_feedback.cancel)
+
+        def update_progress(p: float):
+            self.feedback.set_progress(
+                base_progress + (p / 100.0) * self.progress_weight
+            )
+
+        writer_feedback.progressChanged.connect(update_progress)
+
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.drivername = "GPKG"
         options.layerName = item.collection.id
         options.fileEncoding = "UTF-8"
+        options.feedback = writer_feedback
 
-        # TODO: pass feedback for cancellation and progress reporting?
         self.logger.log(self.tr("Saving to GeoPackage."))
         error_code, error_message, output_path, layer_name = (
             QgsVectorFileWriter.writeAsVectorFormatV3(
                 layer, temp_file_path, QgsCoordinateTransformContext(), options
             )
         )
+
+        self.feedback.canceled.disconnect(writer_feedback.cancel)
+        writer_feedback.progressChanged.disconnect(update_progress)
+
         if error_code != QgsVectorFileWriter.WriterError.NoError:
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
+
+            if error_code == QgsVectorFileWriter.WriterError.Canceled:
+                return None
+
             self.logger.log(
                 self.tr("Failed to save data: {message}.").format(
                     message=error_message
@@ -200,11 +227,15 @@ class DownloadTask(QgsTask):
             item.collection.title, item.collection_type, item.file_path
         )
 
-    def download_tiles(self, item: OfflineDownload) -> DownloadedLayer:
+    def download_tiles(
+        self, item: OfflineDownload, base_progress: float
+    ) -> DownloadedLayer:
         """Downloads Tiles collection.
 
         :param item: Object describing collection to download.
         :type item: OfflineDownload
+        :param base_progress: Base progress value for this item
+        :type base_progress: float
         :returns: Structured object describing oflline layer.
         :rtype: DownloadedLayer
         :raises MbTilesError: When MBTiles file can not be created.
@@ -280,11 +311,18 @@ class DownloadTask(QgsTask):
             else MAX_ZOOM_TILES_VECTOR,
         )
 
-        # TODO: pass feedback for cancellation and progress reporting
+        tiles_processed = 0
+
         self.logger.log(self.tr("Saving to MBTiles."))
         for zoom, tile_range in item.tile_ranges.items():
+            if self.feedback.is_canceled():
+                break
+
             tiles = tile_matrix_set.tilesInRange(tile_range, zoom)
             for i, tile in enumerate(tiles):
+                if self.feedback.is_canceled():
+                    break
+
                 tile_matrix = tile_matrix_set.tileMatrix(tile.zoomLevel())
                 url = format_tile_url(
                     templated_url,
@@ -320,7 +358,19 @@ class DownloadTask(QgsTask):
                 elif item.collection_type == CollectionType.TILES_RASTER:
                     writer.set_tile_data(tile.zoomLevel(), tile.column(), row_tms, data)
 
+                tiles_processed += 1
+                if item.tile_count > 0:
+                    self.feedback.set_progress(
+                        base_progress
+                        + (tiles_processed / item.tile_count) * self.progress_weight
+                    )
+
         writer.close()
+        if self.feedback.is_canceled():
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            return None
+
         shutil.move(temp_file_path, item.file_path)
 
         return DownloadedLayer(
